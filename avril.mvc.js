@@ -1,17 +1,17 @@
 ﻿/// <reference path="../../scripts/_references.js" />
 /*
-* yaryin mvc framework hardly dependency on Backbone.js and Knockout.js 
+* avril mvc framework hardly dependency on Backbone.js and Knockout.js 
 * please ensure you have referenced this two scripts
 */
 (function ($) {
 
     //#region config 
 
-    yaryin.namespace('yaryin.mvc.config');
+    avril.namespace('avril.mvc.config');
 
     var configUrl = '/resources/config';
 
-    var config = yaryin.mvc.config;
+    var config = avril.mvc.config;
 
     $.extend(config, {
         templateUrl: '/resources/template'
@@ -22,13 +22,13 @@
     /* load config from server */
     config.load = function (urlOrData) {
         var merge = function (data) {
-            $.extend(yaryin.mvc.config, data);
+            $.extend(avril.mvc.config, data);
         }
             , load = function (data) {
                 data = data || {};
                 data.requestReady = true;
                 merge(data);
-                yaryin.mvc.config.onload([yaryin.mvc.config]);
+                avril.mvc.config.onload([avril.mvc.config]);
             };
         if (typeof urlOrData === 'string') {
             config.configUrl = urlOrData;
@@ -50,19 +50,19 @@
     /* in your method you could manually call onload method */
     config.onload = function (func) {
         if (config.requestReady) {
-            typeof func == 'function' ? func() : yaryin.event.get('yaryin.mvc.config.onload')(func);
+            typeof func == 'function' ? func() : avril.event.get('avril.mvc.config.onload')(func);
         }
         else {
-            yaryin.event.get('yaryin.mvc.config.onload')(func);
+            avril.event.get('avril.mvc.config.onload')(func);
         }
     };
     config.onload(function (config) {
-        var oldVersion = yaryin.tools.cache('version');
+        var oldVersion = avril.tools.cache('version');
         if (oldVersion != config.version) {
-            yaryin.tools.cache('version', config.version);
-            yaryin.mvc.config.onVersionChange([oldVersion, config.version]);
+            avril.tools.cache('version', config.version);
+            avril.mvc.config.onVersionChange([oldVersion, config.version]);
         }
-        yaryin.release = config.release;
+        avril.release = config.release;
     });
 
     /* make it easy for some method may depend on config loaded , 
@@ -92,17 +92,17 @@
     }
 
     /*do some special things when the version is changed*/
-    config.onVersionChange = yaryin.event.get('yaryin.mvc.config.onVersionChange');
+    config.onVersionChange = avril.event.get('avril.mvc.config.onVersionChange');
 
     //#endregion
 
     //#region models
 
-    yaryin.namespace('yaryin.mvc.models');
+    avril.namespace('avril.mvc.models');
 
-    var models = yaryin.mvc.models;
+    var models = avril.mvc.models;
 
-    var mvc = yaryin.mvc, getPool = function () {
+    var mvc = avril.mvc, getPool = function () {
         var pool = {
             _models: {}
             , model: function (name, model) {
@@ -124,7 +124,7 @@
     models.getPool = getPool;
 
     mvc.config.onload(function () {
-        yaryin.object(config.meta).keys()
+        avril.object(config.meta).keys()
         .each(function (key) {
             pools.model('meta.' + key, config.meta[key]);
         });
@@ -133,20 +133,20 @@
     //#endregion
 
     //#region request
-    yaryin.namespace('yaryin.mvc.request');
+    avril.namespace('avril.mvc.request');
 
-    var request = yaryin.mvc.request;
-    var config = yaryin.mvc.config;
+    var request = avril.mvc.request;
+    var config = avril.mvc.config;
     var templatePre = 'template-';
 
     /*clear template cache when version changed*/
     config.onVersionChange(function (oldVersion, newVersion) {
-        yaryin.tools.cache.delByPre(templatePre + oldVersion);
+        avril.tools.cache.delByPre(templatePre + oldVersion);
     });
 
     request.getTemplateUrl = function (path, callback) {
         config.onload(function () {
-            var req = yaryin.request(yaryin.mvc.config.templateUrl);
+            var req = avril.request(avril.mvc.config.templateUrl);
             req.param('path', path);
             callback(req.getUrl());
         });
@@ -162,13 +162,13 @@
         , path = url.split('?')[0]
         , templateName = templatePre + config.version + '-' + (path.split('/').join('-') || 'home')
         , $template = $('#' + templateName)
-        , templateCache = yaryin.tools.cache(templateName)
+        , templateCache = avril.tools.cache(templateName)
         , queryTemplate = function (path, callback) {
             request.getTemplateUrl(path, function (viewUrl) {
                 $.ajax({
                     url: viewUrl
                     , success: function (tmpl) {
-                        yaryin.tools.cache(templateName, tmpl);
+                        avril.tools.cache(templateName, tmpl);
                         callback();
                     }
                     , error: function (res) {
@@ -180,7 +180,7 @@
         , returnCallback = function () {
             $template = $('#' + templateName);
 
-            templateCache = yaryin.tools.cache(templateName);
+            templateCache = avril.tools.cache(templateName);
 
             if (templateCache) {
 
@@ -229,10 +229,10 @@
 
     //#region routes
 
-    yaryin.namespace('yaryin.mvc.routes');
+    avril.namespace('avril.mvc.routes');
 
-    var routes = yaryin.mvc.routes
-    , mvc = yaryin.mvc
+    var routes = avril.mvc.routes
+    , mvc = avril.mvc
     , AppRoute = routes.mvcRoute = Backbone.Router.extend({
         routes: {
             '*normalPath': 'normalPath'
@@ -300,7 +300,7 @@
     }
     , appRoute = routes.mvcRoute = new routes.mvcRoute();
 
-    routes.onHashChange = yaryin.event.get('yaryin.mvc.routes.onhashchange', routes);
+    routes.onHashChange = avril.event.get('avril.mvc.routes.onhashchange', routes);
 
     Backbone.history.bind('all', function () {
         routes.onHashChange([]);
@@ -311,14 +311,14 @@
     //#region 
 
 
-    //start running yaryin.mvc
+    //start running avril.mvc
     $(function () {
 
         // start navigator
         Backbone.history.start();
 
         //do init 
-        ko.applyBindings(yaryin.mvc.models.pools, document.body);
+        ko.applyBindings(avril.mvc.models.pools, document.body);
     });
     //#endregion
 })(jQuery);

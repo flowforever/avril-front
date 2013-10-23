@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../scripts/_references.js" />
 
 (function () {
-    yaryin.namespace('yaryin.mvc.viewHelper');
-    var viewHelper = yaryin.mvc.viewHelper, request = yaryin.mvc.request;
+    avril.namespace('avril.mvc.viewHelper');
+    var viewHelper = avril.mvc.viewHelper, request = avril.mvc.request;
 
     //#region bindingHandlers
 
@@ -57,9 +57,9 @@
                     };
                 }
 
-                yaryin.mvc.request.getViewTemplate(options.view, function (resTmpl) {
+                avril.mvc.request.getViewTemplate(options.view, function (resTmpl) {
                     if (options.data) {
-                        yaryin.mvc.request.getViewData(options.data, function (data) {
+                        avril.mvc.request.getViewData(options.data, function (data) {
                             ko.bindingHandlers.template.init(element, ko.observable({
                                 name: resTmpl.template
                                 , data: data
@@ -79,9 +79,9 @@
                         view: options
                     };
                 }
-                yaryin.mvc.request.getViewTemplate(options.view, function (resTmpl) {
+                avril.mvc.request.getViewTemplate(options.view, function (resTmpl) {
                     if (options.data) {
-                        yaryin.mvc.request.getViewData(options.data, function (data) {
+                        avril.mvc.request.getViewData(options.data, function (data) {
                             ko.bindingHandlers.template.update(element, ko.observable({
                                 name: resTmpl.template
                                 , data: data
@@ -105,8 +105,8 @@
         paramName: '_modal'
 		, getModals: function (url) {
 		    var self = this;
-		    var req = yaryin.request(url);
-		    return yaryin.object(req.queryString).keys()
+		    var req = avril.request(url);
+		    return avril.object(req.queryString).keys()
 			.where(function (key) {
 			    return key.indexOf(self.paramName) == 0;
 			}).select(function (key) {
@@ -121,14 +121,14 @@
 		    });
 
 		    if (query.length == 0) {
-		        var req = yaryin.request(url);
+		        var req = avril.request(url);
 		        req.param(this.paramName + currentModals.length, escape(modalUrl));
 		        return req.getUrl();
 		    }
 		    return url;
 		}
 		, removeFromUrl: function (url, modalUrl) {
-		    var req = yaryin.request(url);
+		    var req = avril.request(url);
 		    this.getModals(url).where(function (modal) {
 		        return modal.url == modalUrl;
 		    }).each(function (modal) {
@@ -138,7 +138,7 @@
 		    return req.getUrl();
 		}
 		, getPureUrl: function (url) {
-		    var req = yaryin.request(url);
+		    var req = avril.request(url);
 		    this.getModals(url).each(function (modal) {
 		        req.param(modal.key, null);
 		    });
@@ -157,13 +157,13 @@
             popCache[url].show();
         } else {
 
-            var pop = popCache[url] = yaryin.ui.pop($.extend(true, {
+            var pop = popCache[url] = avril.ui.pop($.extend(true, {
                 needData: true
             }, popOptions));
 
-            var pools = pop.modalPool = yaryin.mvc.models.getPool();
+            var pools = pop.modalPool = avril.mvc.models.getPool();
 
-            pools.rootPools = yaryin.mvc.models.pools;
+            pools.rootPools = avril.mvc.models.pools;
 
             pop.show.onShow(function () {
                 var hash = Backbone.history.getHash();
@@ -207,7 +207,7 @@
     }
 
     viewHelper.pop.closeInactive = function (modals) {
-        yaryin.object(popCache).keys().each(function (url) {
+        avril.object(popCache).keys().each(function (url) {
             if (popCache[url]) {
                 var query = modals.where(function (modal) { return modal.url == url; });
                 if (query.length == 0) {
@@ -218,13 +218,13 @@
     }
 
     //init popup when hashchange
-    yaryin.mvc.routes.onHashChange(function () {
+    avril.mvc.routes.onHashChange(function () {
         var hash = (Backbone.history.getHash() || '').replace('#', '');
-        var modals = yaryin.mvc.viewHelper.modal.getModals(hash);
+        var modals = avril.mvc.viewHelper.modal.getModals(hash);
         modals.each(function (modal) {
-            yaryin.mvc.viewHelper.pop(modal.url);
+            avril.mvc.viewHelper.pop(modal.url);
         });
-        yaryin.mvc.viewHelper.pop.closeInactive(modals);
+        avril.mvc.viewHelper.pop.closeInactive(modals);
     });
     //#endregion
 

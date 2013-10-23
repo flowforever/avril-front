@@ -1,17 +1,17 @@
 ﻿/// <reference path="../_references.js" />
 
-; (function ($, yaryin) {
+; (function ($, avril) {
 
-    yaryin.namespace('yaryin.tools');
+    avril.namespace('avril.tools');
 
     var _cache = {};
 
-    //#region yaryin.request
-    (function (yaryin) {
-        if (yaryin.request) {
+    //#region avril.request
+    (function (avril) {
+        if (avril.request) {
             return false;
         }
-        yaryin.request = (function () {
+        avril.request = (function () {
             var apiMap = {};
 
             function request(queryStr) {
@@ -39,7 +39,7 @@
 
                 var setParam = function (key, value) {
                     var hasKey = false;
-                    yaryin.object(api.queryString).each(function (k, v) {
+                    avril.object(api.queryString).each(function (k, v) {
                         if (key.toLower() == k.toLower()) {
                             hasKey = true;
                             api.queryString[k] = value;
@@ -53,7 +53,7 @@
 
                 var getParam = function (key) {
                     var val;
-                    yaryin.object(api.queryString).each(function (k, v) {
+                    avril.object(api.queryString).each(function (k, v) {
                         if (key.toLower() == k.toLower()) {
                             val = v;
                         }
@@ -100,16 +100,16 @@
 
             return request;
         })();
-    })(yaryin);
+    })(avril);
     //#endregion
 
-    //#region yaryin.tools.loader
-    yaryin.namespace('yaryin.tools.loader');
-    yaryin.tools.loader.extend({
+    //#region avril.tools.loader
+    avril.namespace('avril.tools.loader');
+    avril.tools.loader.extend({
         jsonp: function (options) {
             options.success = options.success || function () { };
             options.error = options.error || function () { };
-            var jsonpcallback = 'yaryin_' + yaryin.guid();
+            var jsonpcallback = 'avril_' + avril.guid();
             window[jsonpcallback] = function () {
                 script.jsonp = true;
                 if (options.success) {
@@ -156,9 +156,9 @@
                 removeScript();
             }
 
-            var request = yaryin.request(options.url);
+            var request = avril.request(options.url);
             if (options.data) {
-                yaryin.object(options.data).each(function (key, value) {
+                avril.object(options.data).each(function (key, value) {
                     if (typeof value != 'function' && typeof value != 'object') {
                         request.param(key, encodeURIComponent(value));
                     }
@@ -198,26 +198,26 @@
             style.href = url;
         }
         , template: function (url, callback) {
-            var tmpl = yaryin.tools.cache(url);
+            var tmpl = avril.tools.cache(url);
             if (tmpl) {
                 callback(cache);
             } else {
                 $.get(url, function (tmpl) {
                     callback(tmpl);
-                    yaryin.tools.cache(url, tmpl);
+                    avril.tools.cache(url, tmpl);
                 });
             }
         }
     });
     //#endregion
 
-    //#region yaryin.tools.Communicator
-    yaryin.createlib('yaryin.tools.Communicator', function (options) {
+    //#region avril.tools.Communicator
+    avril.createlib('avril.tools.Communicator', function (options) {
         var config = $.extend(this.options(), {
             targetWindow: window
         }, options)
         , self = this
-        , _init = yaryin.event.registerOn(this, 'init', this, this)
+        , _init = avril.event.registerOn(this, 'init', this, this)
         , _tasks = _cache._cacheData = {}
         , _lastMessage = [];
 
@@ -253,7 +253,7 @@
         }
 
         var postMessage = function (data, needFeedback) {
-            var guid = yaryin.guid() + '_guid', _d = data;
+            var guid = avril.guid() + '_guid', _d = data;
             data.guid = guid;
             data.needFeedback = !!needFeedback;
             data = $.toJSON({
@@ -272,9 +272,9 @@
             })();
         }
 
-        var onMessage = yaryin.event.registerOn(this, 'onMessage', this, this);
+        var onMessage = avril.event.registerOn(this, 'onMessage', this, this);
 
-        var onFeedback = this.onFeedback = yaryin.event.registerOn(this, 'onFeedback', this, this);
+        var onFeedback = this.onFeedback = avril.event.registerOn(this, 'onFeedback', this, this);
 
         var CommandType = this.commandType = {
             im: 'im'
@@ -296,7 +296,7 @@
             }, true);
         }
 
-        this.onCommand = yaryin.event.registerOn(this, 'onCommand', this, this);
+        this.onCommand = avril.event.registerOn(this, 'onCommand', this, this);
 
         this.postIM = function (data) {
             postMessage({
@@ -305,7 +305,7 @@
             }, true);
         }
 
-        this.onIM = yaryin.event.registerOn(this, 'onIM', this, this);
+        this.onIM = avril.event.registerOn(this, 'onIM', this, this);
 
         onMessage(function (msg) {
             if (_lastMessage.contain(msg.guid)) {
@@ -352,11 +352,11 @@
             }
         });
     });
-    yaryin.tools.Communicator.current = yaryin.tools.Communicator();
+    avril.tools.Communicator.current = avril.tools.Communicator();
     //#endregion
 
-    //#region yaryin.tools.cache
-    yaryin.tools.cache = (function () {
+    //#region avril.tools.cache
+    avril.tools.cache = (function () {
         var cache = window.localStorage || {};
 
         var handler = function (key, value) {
@@ -445,9 +445,9 @@
     })();
     //#endregion
 
-    //#region yaryin.tools.localize
+    //#region avril.tools.localize
     (function () {
-        yaryin.createlib('yaryin.tools.Localize', function (options) {
+        avril.createlib('avril.tools.Localize', function (options) {
             var config = $.extend(this.options(), {
                 url: '/resources/localize'
                 , datatype: 'jsonp' // 'jsonp' || 'json'
@@ -460,7 +460,7 @@
 
                 var localizeItems = $(context).is('[data-localize]') ? $(context) : $(force ? '[data-localize]' : '[data-localize][data-localize!=true]', context || 'body');
 
-                var languagePack = yaryin.tools.cache.list(config.language);
+                var languagePack = avril.tools.cache.list(config.language);
 
                 var keys = []
                 , handles = []
@@ -505,13 +505,13 @@
                 }
             }
         });
-        yaryin.tools.localize = yaryin.tools.Localize();
+        avril.tools.localize = avril.tools.Localize();
     })();
 
     //#endregion
 
-    //#region yaryin.tools.sql
-    yaryin.createlib('yaryin.tools.sql', function (options) {
+    //#region avril.tools.sql
+    avril.createlib('avril.tools.sql', function (options) {
         var config = $.extend(true, this.options(), {
             dbName: null
         }, options);
@@ -529,16 +529,16 @@
     });
     //#endregion
 
-    //#region yaryin.tools.template
+    //#region avril.tools.template
     /*
     (function () {
-        yaryin.tools.template = {
+        avril.tools.template = {
             parse: function () { }
             , _cacheKey: function (name) {
                 return 'template:' + this.version() + name;
             }
             , version: function () {
-                return yaryin.tools.cache('yaryin-template-version')
+                return avril.tools.cache('avril-template-version')
             }
             , cacheFromEl: function ($tmpl) {
                 var tempName = $tmpl.attr(this.config.template_data_name);
@@ -547,10 +547,10 @@
             }
             , cacheTemplate: function (name, tmpl) {
                 var tempName = this._cacheKey(name);
-                yaryin.tools.cache(tempName, tmpl);
+                avril.tools.cache(tempName, tmpl);
             }
             , get: function (name, callback) {
-                var tmpl = yaryin.tools.cache(this._cacheKey(name));
+                var tmpl = avril.tools.cache(this._cacheKey(name));
                 if (!tmpl) {
                     this.getRemoteTemplate(name, callback);
                 } else {
@@ -639,17 +639,17 @@
         };
 
         $(function () {
-            if (yaryin.tools.template.config.enabled) {
-                $.get(yaryin.tools.template.config.versionUrl, function (version) {
-                    if (version != yaryin.tools.template.version()) {
-                        yaryin.tools.cache.delByPre('template:');
-                        yaryin.tools.template.versionChanged = true;
+            if (avril.tools.template.config.enabled) {
+                $.get(avril.tools.template.config.versionUrl, function (version) {
+                    if (version != avril.tools.template.version()) {
+                        avril.tools.cache.delByPre('template:');
+                        avril.tools.template.versionChanged = true;
                     }
-                    yaryin.tools.cache('yaryin-template-version', version);
+                    avril.tools.cache('avril-template-version', version);
                 });
                 $('script[type="text/html"],[data-tmpl-name]').each(function () {
                     var $tmpl = $(this);
-                    yaryin.tools.template.cacheFromEl($tmpl);
+                    avril.tools.template.cacheFromEl($tmpl);
                 });
             }
         });
@@ -669,7 +669,7 @@
             }
         });
 
-        yaryin.tools.template = {
+        avril.tools.template = {
             render: function ($el, model) {
 
                 $el = $($el);
@@ -681,7 +681,7 @@
                 if (templateName) {
                     $el.html($.tmpl(templateName, model));
                 } else {
-                    templateName = yaryin.guid();
+                    templateName = avril.guid();
                     $el.attr(dataKey, templateName);
                     $.template(templateName, $el.html());
                     $el.html($.tmpl(templateName, model));
@@ -700,4 +700,4 @@
 
 
 
-})($, yaryin);
+})($, avril);

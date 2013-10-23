@@ -1,12 +1,12 @@
-﻿/// <reference path="yaryin.js" />
-/// <reference path="yaryin.tools.js" />
+﻿/// <reference path="avril.js" />
+/// <reference path="avril.tools.js" />
 
 
-(function (yaryin) {
+(function (avril) {
     String.prototype.localize = function () {
-        return $(yaryin.ui.helper.$span().html(this.toString()).localize())[0].outerHTML;
+        return $(avril.ui.helper.$span().html(this.toString()).localize())[0].outerHTML;
     }
-    yaryin.toArray = function (arg) {
+    avril.toArray = function (arg) {
         var arr = [];
         if (arg.length) {
             for (var i = 0; i < arg.length; i++) {
@@ -15,13 +15,13 @@
         }
         return arr;
     }
-})(yaryin);
+})(avril);
 
 
-yaryin.namespace('yaryin.ui');
+avril.namespace('avril.ui');
 
-//#region yaryin.ui.helper
-(function (yaryin) {
+//#region avril.ui.helper
+(function (avril) {
     var datakey = 'localizeKey';
 
     $.fn.localize = function (group) {
@@ -35,12 +35,12 @@ yaryin.namespace('yaryin.ui');
             this.attr('data-loaclize-group', group);
         }
 
-        yaryin.tools.localize.parse(self);
+        avril.tools.localize.parse(self);
 
         return this;
     }
 
-    var helper = yaryin.ui.helper = {
+    var helper = avril.ui.helper = {
         divStr: '<div/>'
                 , linkStr: '<a/>'
                 , tagBuilder: function (tag, attrs) {
@@ -81,17 +81,17 @@ yaryin.namespace('yaryin.ui');
             org$a.call(helper, attrs);
         }
     })();
-})(yaryin);
+})(avril);
 //#endregion
 
-//#region yaryin.ui.msg
-(function ($, yaryin) {
-    yaryin.createlib('yaryin.ui.msg', function (options) {
+//#region avril.ui.msg
+(function ($, avril) {
+    avril.createlib('avril.ui.msg', function (options) {
         var config = $.extend(true, this.options(), {
             $container: 'body'
         }, options)
         , generateMsg = function () {
-            $msg = $('<div class="alert" style="display:none;"> <button type="button" class="close" data-dismiss="alert">×</button> <strong/>:  <span/>  </div>').attr('guid', yaryin.guid());
+            $msg = $('<div class="alert" style="display:none;"> <button type="button" class="close" data-dismiss="alert">×</button> <strong/>:  <span/>  </div>').attr('guid', avril.guid());
             $msg.find('button').click(function () {
                 $msg.fadeOut();
             });
@@ -130,11 +130,11 @@ yaryin.namespace('yaryin.ui');
             return this;
         }
     });
-})(jQuery, yaryin);
+})(jQuery, avril);
 //#endregion
 
-//#region yaryin.ui.pop
-(function ($, yaryin) {
+//#region avril.ui.pop
+(function ($, avril) {
     //#region private
     var popList = []
     , _divStr = '<div style="display:none;"><div class="modal-backdrop fade in"></div> \
@@ -149,7 +149,7 @@ yaryin.namespace('yaryin.ui');
                 </div></div>';
     //#endregion
 
-    yaryin.createlib('yaryin.ui.pop', function (options) {
+    avril.createlib('avril.ui.pop', function (options) {
         var config = $.extend(this.options(), {
             autoSize: true
             , $handle: null
@@ -251,14 +251,14 @@ yaryin.namespace('yaryin.ui');
 
             this.$pop().show();
 
-            this.$pop().find('.modal-backdrop').css('z-index', yaryin.ui.getZindex() + 2).css('opacity', 0.6);
+            this.$pop().find('.modal-backdrop').css('z-index', avril.ui.getZindex() + 2).css('opacity', 0.6);
 
             this.$pop().find('.modal').hide()
                 .show(config.effect, { to: self.$handle(), easing: config.easing }, config.effectTime, function () {
 
-                    self.$pop().find('.modal-backdrop').css('z-index', yaryin.ui.getZindex() + 1)
+                    self.$pop().find('.modal-backdrop').css('z-index', avril.ui.getZindex() + 1)
 
-                    self.$pop().find('.modal').css('z-index', yaryin.ui.getZindex() + 1);
+                    self.$pop().find('.modal').css('z-index', avril.ui.getZindex() + 1);
 
                 });
 
@@ -354,21 +354,21 @@ yaryin.namespace('yaryin.ui');
 
         self.hook('show,hide');
 
-        this.events.beforeLoad = yaryin.event.get('beforeLoad', this);
+        this.events.beforeLoad = avril.event.get('beforeLoad', this);
 
-        this.events.onLoad = yaryin.event.get('onLoad', this);
+        this.events.onLoad = avril.event.get('onLoad', this);
 
-        this.events.onLoadHandle = yaryin.event.get('onLoadHandle', this);
+        this.events.onLoadHandle = avril.event.get('onLoadHandle', this);
 
-        this.events.onContentReady = yaryin.event.get('onContentReady', this);
+        this.events.onContentReady = avril.event.get('onContentReady', this);
 
-        this.events.onHide = yaryin.event.get('onHide', this);
+        this.events.onHide = avril.event.get('onHide', this);
 
         this.events.onOptionChange(function (key, newConfig, oldConfig) {
             switch (key) {
                 case 'content': {
                     self.$pop().find('.modal-body').html(newConfig[key]);
-                    yaryin.tools.localize.parse(self.$pop());
+                    avril.tools.localize.parse(self.$pop());
                     self.events.onLoadHandle([self.$pop(), self]);
                     self.events.onContentReady([]);
                     break;
@@ -415,7 +415,7 @@ yaryin.namespace('yaryin.ui');
                 return $footer;
             };
 
-            pop.onButtonClick = yaryin.event.get('onButtonClick', pop);
+            pop.onButtonClick = avril.event.get('onButtonClick', pop);
 
             if (config.buttons) {
                 var $buttonArea = $footer();
@@ -448,9 +448,9 @@ yaryin.namespace('yaryin.ui');
         }
     }
 
-    yaryin.alert = function (msg, func) {
+    avril.alert = function (msg, func) {
         func = func || function () { }
-        var $alert = yaryin.ui.pop({
+        var $alert = avril.ui.pop({
             width: 300
             , height: 200
             , resizable: false
@@ -474,9 +474,9 @@ yaryin.namespace('yaryin.ui');
         $alert.$pop().find('a:eq(0)').focus();
     }
 
-    yaryin.confirm = function (msg, func) {
+    avril.confirm = function (msg, func) {
         func = func || function () { }
-        var $confirm = yaryin.ui.pop({
+        var $confirm = avril.ui.pop({
             width: 320
             , height: 180
             , resizable: false
@@ -510,9 +510,9 @@ yaryin.namespace('yaryin.ui');
         $confirm.$pop().find('a:eq(0)').focus();
     }
 
-    yaryin.prompt = function (msg, func, defaultValue) {
+    avril.prompt = function (msg, func, defaultValue) {
         func = func || function () { }
-        var $confirm = yaryin.ui.pop({
+        var $confirm = avril.ui.pop({
             width: 320
             , height: 180
              , resizable: false
@@ -549,12 +549,12 @@ yaryin.namespace('yaryin.ui');
         });
     }
 
-    yaryin.ui.pop.open = function (url) {
-        var pop = new yaryin.ui.pop();
+    avril.ui.pop.open = function (url) {
+        var pop = new avril.ui.pop();
         pop.load(url); pop.show()
     }
 
-    yaryin.ui.pop.toJQ('pop', function (options) {
+    avril.ui.pop.toJQ('pop', function (options) {
         if (this.attr('data-pop')) {
             try {
                 $.extend(true, options, eval('(' + this.attr('data-pop') + ')'));
@@ -564,7 +564,7 @@ yaryin.namespace('yaryin.ui');
         options.$handle = this;
     });
 
-    yaryin.ui.popContext = {
+    avril.ui.popContext = {
         popList: function () {
             return popList;
         }
@@ -572,13 +572,13 @@ yaryin.namespace('yaryin.ui');
             return popList && popList.length ? popList[popList.length - 1] : null;
         }
     };
-})(jQuery, yaryin);
+})(jQuery, avril);
 //#endregion
 
-//#region yaryin.cookie
-(function (yaryin) {
-    yaryin.namespace('yaryin.ui');
-    yaryin.ui.cookie = {
+//#region avril.cookie
+(function (avril) {
+    avril.namespace('avril.ui');
+    avril.ui.cookie = {
         get: function (name) {
             var arr = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)(;|$)"));
             if (arr != null) return unescape(arr[2]); return null;
@@ -602,17 +602,17 @@ yaryin.namespace('yaryin.ui');
             this.set(key, window.JSON ? window.JSON.stringify(obj) : $.toJSON(obj));
         }
     };
-})(yaryin);
+})(avril);
 //#endregion
 
-//#region yaryin.ui.progressbar
-(function ($, yaryin) {
-    yaryin.createlib('yaryin.ui.progressbar', function (options) {
+//#region avril.ui.progressbar
+(function ($, avril) {
+    avril.createlib('avril.ui.progressbar', function (options) {
         var config = $.extend(true, this.options(), {
             auto: true
             , stop: false
         }, options)
-        , $el = yaryin.ui.helper.$div().css({
+        , $el = avril.ui.helper.$div().css({
             width: config.width || 250
             , height: config.height || 20
             , position: config.position || 'fixed'
@@ -621,7 +621,7 @@ yaryin.namespace('yaryin.ui');
             , display: 'none'
         }).appendTo('body')
         , self = this
-        , guid = yaryin.guid()
+        , guid = avril.guid()
         , interval;
 
         $el.progressbar();
@@ -638,7 +638,7 @@ yaryin.namespace('yaryin.ui');
                 }
                 if (!config.stop) {
                     $el.progressbar("value", i);
-                    $el.css('z-index', yaryin.ui.getZindex() + 2);
+                    $el.css('z-index', avril.ui.getZindex() + 2);
                 }
             }, 50);
         }
@@ -673,17 +673,17 @@ yaryin.namespace('yaryin.ui');
             var ins;
             return function () {
                 if (!ins) {
-                    ins = yaryin.ui.progressbar();
+                    ins = avril.ui.progressbar();
                 }
                 return ins;
             }
         })()
     });
-})(jQuery, yaryin);
+})(jQuery, avril);
 //#endregion
 
-//#region yaryin.ui.ajaxFrame
-(function ($, yaryin) {
+//#region avril.ui.ajaxFrame
+(function ($, avril) {
     //#region jquery.hashchange
     (function ($, window, undefined) {
         '$:nomunge'; // Used by YUI compressor.
@@ -876,7 +876,7 @@ yaryin.namespace('yaryin.ui');
     })(jQuery, this);
     //#endregion
 
-    yaryin.createlib('yaryin.ui.ajaxframe', function (options) {
+    avril.createlib('avril.ui.ajaxframe', function (options) {
         var config = $.extend(this.options(), {
             identifyPre: '#/'
             , $container: '#ajax-container'
@@ -929,7 +929,7 @@ yaryin.namespace('yaryin.ui');
             if (!_getCache(url) || !config.cache) {
                 $.ajax({
                     url: url
-                    , data: { _yaryin_guid: yaryin.guid() }
+                    , data: { _avril_guid: avril.guid() }
                     , success: function (response) {
                         var isJSON = false, obj;
                         try {
@@ -940,11 +940,11 @@ yaryin.namespace('yaryin.ui');
                         catch (E) { }
                         if (isJSON) {
                             if (response.innerType) {
-                                yaryin[response.innerType](response.msg, function () {
-                                    yaryin.event.get('response.' + response.innerType)(yaryin.toArray(arguments).push(url));
+                                avril[response.innerType](response.msg, function () {
+                                    avril.event.get('response.' + response.innerType)(avril.toArray(arguments).push(url));
                                 });
                             } else {
-                                yaryin.ui.msg().show('body>div.container.main-page', obj);
+                                avril.ui.msg().show('body>div.container.main-page', obj);
                             }
                         }
                         else {
@@ -960,7 +960,7 @@ yaryin.namespace('yaryin.ui');
 
         this.loadContent = loadContent;
 
-        this.onLoad = yaryin.event.get('onLoad', this);
+        this.onLoad = avril.event.get('onLoad', this);
 
         this.reload = function () {
             if (self._lasturl) {
@@ -969,7 +969,7 @@ yaryin.namespace('yaryin.ui');
             return this;
         }
 
-        this.beforeLoad = yaryin.event.get('beforeLoad', this);
+        this.beforeLoad = avril.event.get('beforeLoad', this);
 
         this.navTo = function (url) {
             if (this.options().enabled) {
@@ -1017,13 +1017,13 @@ yaryin.namespace('yaryin.ui');
         }
     });
 
-    window.ajaxFrame = yaryin.ui.ajaxframe();
-})(jQuery, yaryin);
+    window.ajaxFrame = avril.ui.ajaxframe();
+})(jQuery, avril);
 //#endregion
 
-//#region yaryin.ui.getZindex 
+//#region avril.ui.getZindex 
 (function () {
-    yaryin.ui.getZindex = function () {
+    avril.ui.getZindex = function () {
         return $('*')
             .toArray()
             .select(function (el) {
@@ -1037,14 +1037,14 @@ yaryin.namespace('yaryin.ui');
 })();
 //#endregion
 
-//#region yaryin loading cover
+//#region avril loading cover
 (function ($) {
 
-    yaryin.namespace('yaryin.ui.loadingCover');
+    avril.namespace('avril.ui.loadingCover');
 
-    yaryin.ui.loadingCover.removeAll = yaryin.event.register('yaryin.ui.loadingCover.removeAll');
+    avril.ui.loadingCover.removeAll = avril.event.register('avril.ui.loadingCover.removeAll');
 
-    yaryin.ui.loadingCover.hideAll = yaryin.event.register('yaryin.ui.loadingCover.hideAll');
+    avril.ui.loadingCover.hideAll = avril.event.register('avril.ui.loadingCover.hideAll');
 
     function loadingCover(options) {
         var handle = $(this);
@@ -1070,7 +1070,7 @@ yaryin.namespace('yaryin.ui');
                     , height: handle.height()
                     , top: handle.offset().top
                     , left: handle.offset().left
-                    , 'z-index': yaryin.ui.getZindex() + 1
+                    , 'z-index': avril.ui.getZindex() + 1
                 });
                 $img.css({
                     'left': handle.width() / 2 - 16
@@ -1094,8 +1094,8 @@ yaryin.namespace('yaryin.ui');
                     return $cover;
                 }
             };
-            yaryin.ui.loadingCover.removeAll(api.remove);
-            yaryin.ui.loadingCover.hideAll(api.hide);
+            avril.ui.loadingCover.removeAll(api.remove);
+            avril.ui.loadingCover.hideAll(api.hide);
             $cover.appendTo('body');
             adjustCover();
             $(window).resize(function () {
@@ -1117,9 +1117,9 @@ yaryin.namespace('yaryin.ui');
     //cache the loading image
     $(function () {
         $('body').loadingCover();
-        yaryin.ui.loadingCover.hideAll();
+        avril.ui.loadingCover.hideAll();
     });
 })(jQuery);
 //#endregion
 
-yaryin.module.notify('yaryin.ui');
+avril.module.notify('avril.ui');

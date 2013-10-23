@@ -2,7 +2,7 @@
 (function ($) {
     if (!$.validator) { return false;}
 
-    yaryin.namespace('yaryin.validator');
+    avril.namespace('avril.validator');
 
     (function () {
         var orgShowLabel = $.validator.prototype.showLabel;
@@ -14,7 +14,7 @@
         }
     })();
 
-    yaryin.validator.extend({
+    avril.validator.extend({
         init: function (form) {
         }
         , parseForm: function ($form) {
@@ -116,7 +116,7 @@
     });
 
     $.each(['minlength', 'maxlength', 'min', 'max'], function () {
-        yaryin.validator._paramAdapter[this] = function (attr, $input) {
+        avril.validator._paramAdapter[this] = function (attr, $input) {
             return Number(arguments[0]);
         }
     });

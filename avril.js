@@ -1,40 +1,40 @@
 ﻿(function (window) {
 
-    if (window.yaryin && yaryin.yaryin) {
-        return yaryin;
+    if (window.avril && avril.avril) {
+        return avril;
     }
 
     //#endregion
 
-    //#region yaryin
+    //#region avril
 
     (function () {
-        var _yaryin = window.yaryin;
+        var _avril = window.avril;
 
         ///<summary>
-        /// yaryin js framework
-        /// by yaryin.namespace("adminJs.global"); adminJs.global is avaliable
+        /// avril js framework
+        /// by avril.namespace("adminJs.global"); adminJs.global is avaliable
         /// adminJs.global.extend({ sayHello: function(){ alert('hello ') }});
         /// adminJs.global.extend({ sayHi: function(){ alert('hi ') }});
         /// adminJs.global.extend({ ready: function(){ alert('i am going here! ') }});//ready method will execute immediately
-        /// yaryin.namespace("adminJs.fileJs");
+        /// avril.namespace("adminJs.fileJs");
         /// adminJs.fileJs.extend({ sayHello: function(){ alert('hello ') }});
-        /// yaryin.using(adminJs.global,function(global){
+        /// avril.using(adminJs.global,function(global){
         ///     sayHello();
         ///     global.sayHello();
         /// });
-        /// yaryin.using([adminJs.global,adminJs.fileJs],function(global,fileJs){
+        /// avril.using([adminJs.global,adminJs.fileJs],function(global,fileJs){
         ///     fileJs.sayHello();
         ///     global.sayHello();
         ///     sayHi();
         /// });
         ///</summary>
 
-        var yaryin = {};
+        var avril = {};
 
-        yaryin.yaryin = 'yaryin';
+        avril.avril = 'avril';
 
-        yaryin.$ = jQuery;
+        avril.$ = jQuery;
 
         var _extendMethod = function (obj) {
             if (typeof (obj) == 'function' || typeof (obj) == 'object') {
@@ -51,7 +51,7 @@
                                     _extendMethod(obj[p]);
                                 } // end for
                                 if (objx.ready && typeof (objx.ready) == 'function') {
-                                    yaryin.ready(function () {
+                                    avril.ready(function () {
                                         objx.ready.call(objx);
                                     });
                                 }
@@ -62,27 +62,27 @@
             } //end if
         };
 
-        yaryin.isValueType = function (input) {
+        avril.isValueType = function (input) {
             return input == null || 'number,boolean,string,undefined'.split(',').indexOf(typeof input) >= 0;
         }
 
-        yaryin.isFunc = function (obj) {
+        avril.isFunc = function (obj) {
             return typeof obj == 'function';
         }
 
-        yaryin.isObj = function (obj) {
+        avril.isObj = function (obj) {
             return typeof obj == 'object';
         }
 
-        yaryin.isArray = function (obj) {
+        avril.isArray = function (obj) {
             return obj instanceof Array;
         }
 
-        yaryin.isStr = function (obj) {
+        avril.isStr = function (obj) {
             return typeof obj == 'string';
         }
 
-        yaryin.helper = {
+        avril.helper = {
             encode: function (input) {
                 return $('<div/>').html(input).text();
             }
@@ -97,9 +97,9 @@
             }
         };
 
-        yaryin.namespace = function (spaceName, obj) {
+        avril.namespace = function (spaceName, obj) {
             ///<summary>
-            /// registing method or object to yaryin
+            /// registing method or object to avril
             ///</summary>
             ///<param type="string" name="spaceName">
             /// create a namespace
@@ -129,9 +129,9 @@
             }
         }
 
-        yaryin.module = function (namespace, dependences, func) {
+        avril.module = function (namespace, dependences, func) {
             ///<summary>
-            /// registing method or object to yaryin
+            /// registing method or object to avril
             ///</summary>
             ///<param type="object" name="spaceName">
             /// create a namespace
@@ -140,18 +140,18 @@
             if (typeof dependences === 'string') {
                 dependences = dependences.trimAll().split(',');
             }
-            var getEvent = yaryin.module.getModuleEvent
+            var getEvent = avril.module.getModuleEvent
             , waitModules = dependences.where(function (ns) {
-                return !yaryin.object(window).getVal(ns);
+                return !avril.object(window).getVal(ns);
             })
             , executeCount = 0
             , execute = function (times) {
                 printDependences();
                 if (times == waitModules.length) {
-                    yaryin.namespace(namespace);
-                    var module = yaryin.object(window).getVal(namespace);
+                    avril.namespace(namespace);
+                    var module = avril.object(window).getVal(namespace);
                     var dependenceModules = dependences.select(function (ns) {
-                        return yaryin.object(window).getVal(ns);
+                        return avril.object(window).getVal(ns);
                     });
                     func.apply(module, dependenceModules);
                     getEvent(namespace)([name]);
@@ -159,10 +159,10 @@
             }
             , printDependences = function () {
                 var _waits = waitModules.where(function (module) {
-                    return !yaryin.object(window).getVal(module);
+                    return !avril.object(window).getVal(module);
                 });
                 var _finished = dependences.where(function (module) {
-                    return !!yaryin.object(window).getVal(module);
+                    return !!avril.object(window).getVal(module);
                 });
                 if (_waits.length == 0) {
                     console.log(namespace + ' dependences loaded complete.');
@@ -182,24 +182,24 @@
             execute(0);
         }
 
-        yaryin.module.getModuleEvent = function (ns) {
-            return yaryin.event.get('module.events.' + ns);
+        avril.module.getModuleEvent = function (ns) {
+            return avril.event.get('module.events.' + ns);
         }
 
-        yaryin.module.notify = function (ns, data) {
-            yaryin.module.getModuleEvent(ns)([ns, data])
+        avril.module.notify = function (ns, data) {
+            avril.module.getModuleEvent(ns)([ns, data])
         }
 
-        yaryin.module.subscribe = function (ns, func) {
-            yaryin.module.getModuleEvent(ns)(func);
+        avril.module.subscribe = function (ns, func) {
+            avril.module.getModuleEvent(ns)(func);
         }
 
-        yaryin.extend = function (obj1, obj2) {
+        avril.extend = function (obj1, obj2) {
             ///<summary>
             /// this method can extend fJs
             ///</summary>
             ///<param type="object" name="obj1">
-            /// fist object to extend if obj2 is null obj1's attribute will be extended to yaryin
+            /// fist object to extend if obj2 is null obj1's attribute will be extended to avril
             ///</param>
             ///<param type="object" name="obj2">
             /// extend obj2's attribute to obj1
@@ -211,8 +211,8 @@
             if (obj1) {
                 if (obj2) {
                     if (typeof (obj1) == 'string') {
-                        yaryin[obj1] = obj2;
-                        _extendMethod(yaryin[obj1]);
+                        avril[obj1] = obj2;
+                        _extendMethod(avril[obj1]);
                     }
                     else if (typeof (obj1) == 'object' || typeof (obj1) == 'function') {
                         for (var p in obj2) {
@@ -223,20 +223,20 @@
                 else {
                     if (typeof (obj1) == 'object' || typeof (obj1) == 'function') {
                         for (var p in obj1) {
-                            yaryin[p] = obj1[p];
-                            _extendMethod(yaryin[p]);
+                            avril[p] = obj1[p];
+                            _extendMethod(avril[p]);
                         }
                     }
                 }
             }
 
-            return yaryin;
+            return avril;
         }
 
         //------useful method in js----------------------
 
-        ///Class yaryin.object
-        var yaryinObject = {
+        ///Class avril.object
+        var avrilObject = {
             maxDeep: 5,
             isValueType: function (input) {
                 return input == null || 'number,boolean,string,undefined'.split(',').indexOf(typeof input) >= 0;
@@ -328,17 +328,17 @@
             },
             beautifyNames: function (obj, deep, changeName) {
                 var self = this;
-                if (yaryin.isArray(obj)) {
+                if (avril.isArray(obj)) {
                     var r = [];
                     for (var i = 0; i < obj.length; i++) {
                         var val = obj[i];
-                        if (yaryin.isObj(val) || yaryin.isArray(val)) {
+                        if (avril.isObj(val) || avril.isArray(val)) {
                             val = self.beautifyNames(val, deep + 1, changeName);
                         }
                         r.push(val);
                     }
                     return r;
-                } else if (yaryin.isObj(obj)) {
+                } else if (avril.isObj(obj)) {
                     var result = {};
                     deep = deep == undefined || isNaN(deep) ? 0 : deep;
                     if (deep > this.maxDeep) {
@@ -351,17 +351,17 @@
                         if (self.isValueType(value)) {
                             result[key] = value;
                         } else {
-                            if (!yaryin.isObj(value)) {
-                                if (yaryin.isStr(key) && changeName) {
+                            if (!avril.isObj(value)) {
+                                if (avril.isStr(key) && changeName) {
                                     result[key.lowerChar0()] = value;
                                 } else {
                                     result[key] = value;
                                 }
                             } else { // value is object
-                                if (yaryin.isStr(key) && changeName) {
-                                    result[key.lowerChar0()] = yaryin.object.beautifyNames(value, deep + 1, changeName);
+                                if (avril.isStr(key) && changeName) {
+                                    result[key.lowerChar0()] = avril.object.beautifyNames(value, deep + 1, changeName);
                                 } else {
-                                    result[key] = yaryin.object.beautifyNames(value, deep + 1, changeName);
+                                    result[key] = avril.object.beautifyNames(value, deep + 1, changeName);
                                 }
                             }
                         }
@@ -373,10 +373,10 @@
                 return this.beautifyNames(obj, deep, false);
             },
             each: function (obj, func) {
-                if (!yaryin.isFunc(func)) {
+                if (!avril.isFunc(func)) {
                     return false;
                 }
-                if (yaryin.isArray(obj)) {
+                if (avril.isArray(obj)) {
                     for (var i = 0; i < obj.length; i++) {
                         if (func(i, obj[i]) == false) return false;
                     }
@@ -425,78 +425,78 @@
             }
         };
 
-        yaryin.object = function (obj) {
+        avril.object = function (obj) {
             var api = {
                 getVal: function (pStr) {
-                    return yaryin.object.getVal(obj, pStr);
+                    return avril.object.getVal(obj, pStr);
                 },
                 setVal: function (pStr, val) {
-                    return yaryin.object.setVal(obj, pStr, val);
+                    return avril.object.setVal(obj, pStr, val);
                 },
                 each: function (func) {
-                    yaryin.object.each(obj, func);
+                    avril.object.each(obj, func);
                 },
-                keys: function () { return yaryin.object.keys(obj); },
-                values: function () { return yaryin.object.values(obj); },
+                keys: function () { return avril.object.keys(obj); },
+                values: function () { return avril.object.values(obj); },
                 beautifyNames: function () {
-                    return yaryin.object.beautifyNames(obj);
+                    return avril.object.beautifyNames(obj);
                 },
                 deepClone: function (deep) {
-                    return yaryin.object.deepClone(obj, deep);
+                    return avril.object.deepClone(obj, deep);
                 },
                 tryGetVal: function (pStr) {
                     var val = undefined;
                     try {
-                        val = yaryin.object.getVal(obj, pStr);
+                        val = avril.object.getVal(obj, pStr);
                     } catch (E) {
                     }
                     return val;
                 },
                 instanceOf: function (type) {
-                    return yaryin.object.instanceOf(obj, type);
+                    return avril.object.instanceOf(obj, type);
                 },
                 keyValues: function () {
-                    return yaryin.object.keyValues(obj);
+                    return avril.object.keyValues(obj);
                 },
                 toArray: function () {
-                    return yaryin.object.toArray(obj);
+                    return avril.object.toArray(obj);
                 }
             };
             return api;
         }
 
-        $.extend(yaryin.object, yaryinObject);
+        $.extend(avril.object, avrilObject);
 
         var _tempdata = {};
 
-        yaryin.data = function (name, value) {
+        avril.data = function (name, value) {
             if (typeof name != 'string') {
-                name = yaryin.getHash(name).toLowerCase();
+                name = avril.getHash(name).toLowerCase();
             }
 
             if (arguments.length == 1) {
                 try {
-                    var result = yaryin.object.getVal(_tempdata, name);
+                    var result = avril.object.getVal(_tempdata, name);
                     return result;
                 }
                 catch (E) { }
                 return null;
             } else if (arguments.length == 2) {
-                yaryin.object.setVal(_tempdata, name, value);
+                avril.object.setVal(_tempdata, name, value);
             } else if (arguments.length == 0) {
                 return _tempdata;
             }
         }
 
-        yaryin.guid = function () {
+        avril.guid = function () {
             return (new Date().getTime()) + '_' + Math.random().toString().replace('.', '_');
         }
 
-        yaryin.alert = function (msg) {
+        avril.alert = function (msg) {
             alert(msg);
         }
 
-        yaryin.confirm = function (msg, callback, title) {
+        avril.confirm = function (msg, callback, title) {
             //Disable confirm if the message is null.
             if (msg == undefined || msg == '') {
                 callback(true);
@@ -513,7 +513,7 @@
             if (!query) {
                 query = {
                     obj: obj,
-                    key: yaryin.guid()
+                    key: avril.guid()
                 };
                 objReference.push(query);
             }
@@ -521,37 +521,37 @@
             return query.key;
         }
 
-        //window.name = 'yaryin';
+        //window.name = 'avril';
 
-        yaryin.getHash = __getHash;
+        avril.getHash = __getHash;
 
         var _single_getHashInited = false;
 
-        yaryin._single = function () {
+        avril._single = function () {
             if (!_single_getHashInited) {
-                yaryin.getHash = top.yaryin ? top.yaryin.getHash : __getHash;
+                avril.getHash = top.avril ? top.avril.getHash : __getHash;
             }
             _single_getHashInited = true;
         }
 
         //-------end us -useful method in js------------
 
-        window.yaryin = yaryin;
-    })(); //end yaryin
+        window.avril = avril;
+    })(); //end avril
 
     //#endregion
 
-    //#region yaryin.event
+    //#region avril.event
 
-    (function ($, yaryin) {
+    (function ($, avril) {
 
-        if (yaryin.event) {
+        if (avril.event) {
             return true;
         }
 
-        var event = yaryin.event = {};
+        var event = avril.event = {};
 
-        var guid = yaryin.guid();
+        var guid = avril.guid();
 
         var index = 0;
 
@@ -594,7 +594,7 @@
 
                 this.eventList[name] = this.eventList[name] || [];
 
-                context = context || yaryin.event._event;
+                context = context || avril.event._event;
 
                 var result = true;
 
@@ -628,11 +628,11 @@
             }
             var func = function (func, data) {
                 if (typeof (func) == 'function') {
-                    yaryin.event._event.add(func, fnName, data, executeContext);
+                    avril.event._event.add(func, fnName, data, executeContext);
                 } else { //func is a param when ajax-submit execute
                     data = data || func;
                     executeContext = executeContext || data;
-                    return yaryin.event._event.execute(fnName, executeContext, data);
+                    return avril.event._event.execute(fnName, executeContext, data);
                 }
             }
             func.clear = function () {
@@ -648,7 +648,7 @@
         }
 
         event.registerOn = function (obj, fnName, executeContext) {
-            var ns = yaryin.getHash(obj) + '_' + fnName;
+            var ns = avril.getHash(obj) + '_' + fnName;
             return this.register(ns, executeContext);
         }
 
@@ -706,7 +706,7 @@
         }
 
         event.hook = function (obj, funNames, ns) {
-            ns = ns || yaryin.getHash(obj);
+            ns = ns || avril.getHash(obj);
             funNames.split(',').each(function (funName) {
                 if (funName)
                     hook(obj, funName, ns);
@@ -744,19 +744,19 @@
             return ev;
         }
 
-    })(yaryin.$, yaryin);
+    })(avril.$, avril);
 
     //#endregion
 
-    //#region yaryin.createlib & yaryin.extendlib
+    //#region avril.createlib & avril.extendlib
 
-    (function (yaryin) {
-        if (yaryin.createlib) {
-            return yaryin.createlib;
+    (function (avril) {
+        if (avril.createlib) {
+            return avril.createlib;
         }
 
         /*
-        yaryin.createlib('namespace.helloworld',function(options){
+        avril.createlib('namespace.helloworld',function(options){
         var config = this.options(options);
         this.sayHello = function(){ alert('hello');}
         this.sayGoodbye = function(){ alert('good bye'); }
@@ -831,15 +831,15 @@
             /// statics methods
             ///</summary>
             obj = obj || window;
-            if (yaryin.object(obj).tryGetVal(namespace)) {
-                return yaryin.object(obj).tryGetVal(namespace);
+            if (avril.object(obj).tryGetVal(namespace)) {
+                return avril.object(obj).tryGetVal(namespace);
                 throw namespace + ' existed !';
             }
 
-            yaryin.object(obj)
+            avril.object(obj)
             .setVal(namespace, function (options) {
                 index++;
-                var fnType = yaryin.object(obj).getVal(namespace);
+                var fnType = avril.object(obj).getVal(namespace);
                 if (!(this instanceof fnType)) {
                     return (new fnType(options));
                 }
@@ -847,12 +847,12 @@
                 var _self = this;
 
                 if (base) {
-                    if (yaryin.isStr(base)) {
-                        base = yaryin.object(obj).getVal(base);
+                    if (avril.isStr(base)) {
+                        base = avril.object(obj).getVal(base);
                     }
                     var _base = base(options);
 
-                    yaryin.object(_base).each(function (key, value) {
+                    avril.object(_base).each(function (key, value) {
                         _self[key] = value;
                     });
 
@@ -866,13 +866,13 @@
 
                     _self.events = {};
 
-                    var guid = yaryin.guid()
+                    var guid = avril.guid()
 
                     , config = configCache[guid] = {}
 
-                    , onPropertyChange = yaryin.event.register(namespace + '[' + index + '].onPropertyChange')
+                    , onPropertyChange = avril.event.register(namespace + '[' + index + '].onPropertyChange')
 
-                    , beforePropertyChange = yaryin.event.register(namespace + '[' + index + '].beforePropertyChange');
+                    , beforePropertyChange = avril.event.register(namespace + '[' + index + '].beforePropertyChange');
 
                     bindOptionEvents(options, _self);
 
@@ -880,7 +880,7 @@
                         var events = _self.events;
                         var ns = namespace + '[' + index + '].';
                         if (!events[eventName])
-                            events[eventName] = yaryin.event.register(ns + eventName, events);
+                            events[eventName] = avril.event.register(ns + eventName, events);
                     }
 
                     function setOption(key, newConfig, oldConfig) {
@@ -919,7 +919,7 @@
                     _self.events.onOptionChange = onPropertyChange;
 
                     function hook(_self, funName) {
-                        yaryin.event.hook(_self, funName, namespace + '[' + index + '].');
+                        avril.event.hook(_self, funName, namespace + '[' + index + '].');
                         var before = before || 'before'
                         , on = on || 'on'
                         , beforeName = _beautifyFunName(before, funName)
@@ -945,11 +945,11 @@
                     }
 
                     _self._prop = function (name, geter, seter) {
-                        yaryin.createlib.getset(_self, name, geter, seter);
+                        avril.createlib.getset(_self, name, geter, seter);
                     }
 
                     _self._parseConfig = function (jQContext) {
-                        yaryin.createlib.parseConfig(_self, jQContext);
+                        avril.createlib.parseConfig(_self, jQContext);
                     }
                 }
 
@@ -977,7 +977,7 @@
                 /*end constructor*/
             });
 
-            var type = yaryin.object(obj).getVal(namespace);
+            var type = avril.object(obj).getVal(namespace);
 
             var _instance;
 
@@ -1058,23 +1058,23 @@
         }
 
         , _extend = function (base, namespace, constructor, statics, obj) {
-            var type = yaryin.createlib(namespace, constructor, statics, base, obj);
+            var type = avril.createlib(namespace, constructor, statics, base, obj);
 
             return type;
         };
 
-        yaryin.createlib = _class;
-        yaryin.createlib.getset = function (ins, name, geter, seter) {
+        avril.createlib = _class;
+        avril.createlib.getset = function (ins, name, geter, seter) {
             ins[name] = (function (ins, name, geter, seter) {
                 var cahce = { value: undefined };
                 return function () {
                     if (arguments.length == 0) {
-                        if (yaryin.isFunc(geter)) {
+                        if (avril.isFunc(geter)) {
                             return geter.call(cahce, cahce.value);
                         }
                         return cahce.value;
                     } else {
-                        if (yaryin.isFunc(seter)) {
+                        if (avril.isFunc(seter)) {
                             seter.call(cahce, arguments[0]);
                         } else {
                             cahce.value = arguments[0];
@@ -1084,54 +1084,54 @@
                 }
             })(ins, name, geter, seter);
         }
-        yaryin.createlib.parseConfig = function (yaryinObj, jQContext) {
-            yaryin.object(yaryinObj.options()).each(function (key, value) {
+        avril.createlib.parseConfig = function (avrilObj, jQContext) {
+            avril.object(avrilObj.options()).each(function (key, value) {
                 if (key.indexOf('$') == 0) {
-                    if (!yaryinObj[key]) {
-                        var cache, oldKey = yaryin.guid();
-                        yaryin.createlib.getset(yaryinObj, key, function () {
-                            if (oldKey != yaryinObj.options()[key]) {
-                                oldKey = yaryinObj.options()[key];
-                                cache = (jQContext || $)(yaryinObj.options()[key]);
+                    if (!avrilObj[key]) {
+                        var cache, oldKey = avril.guid();
+                        avril.createlib.getset(avrilObj, key, function () {
+                            if (oldKey != avrilObj.options()[key]) {
+                                oldKey = avrilObj.options()[key];
+                                cache = (jQContext || $)(avrilObj.options()[key]);
                             }
                             return cache;
                         }, function (value) {
-                            yaryinObj.options(key, value);
+                            avrilObj.options(key, value);
                         });
                     }
                 }
             });
         }
-        yaryin.createlibOn = function (obj, namespace, constructor, statics, base) {
-            return yaryin.createlib(namespace, constructor, statics, base, obj);
+        avril.createlibOn = function (obj, namespace, constructor, statics, base) {
+            return avril.createlib(namespace, constructor, statics, base, obj);
         }
 
-        yaryin.extendlib = _extend;
+        avril.extendlib = _extend;
 
-        yaryin.createlib.beautifyFunName = _beautifyFunName;
+        avril.createlib.beautifyFunName = _beautifyFunName;
 
-        //overrided yaryin.object.instanceOf
+        //overrided avril.object.instanceOf
         (function () {
-            var __instanceOf = yaryin.object.instanceOf;
-            yaryin.object.instanceOf = function (obj, type) {
+            var __instanceOf = avril.object.instanceOf;
+            avril.object.instanceOf = function (obj, type) {
                 var res = obj instanceof type;
                 if (res) {
                     return true;
                 }
-                if (yaryin.isFunc(obj._getSuper)) {
+                if (avril.isFunc(obj._getSuper)) {
                     var base = obj._getSuper();
                     res = base instanceof type;
                     if (res) {
                         return true;
                     }
                     if (base != null) {
-                        return yaryin.object(base).instanceOf(type);
+                        return avril.object(base).instanceOf(type);
                     }
                 }
                 return res;
             }
         })();
-    })(yaryin);
+    })(avril);
 
     //#endregion
 
