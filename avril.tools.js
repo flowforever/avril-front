@@ -12,14 +12,8 @@
             return false;
         }
         avril.request = (function () {
-            var apiMap = {};
-
             function request(queryStr) {
                 var api = {};
-
-                if (apiMap[queryStr]) {
-                    return apiMap[queryStr];
-                }
 
                 api.queryString = (function () {
                     if (queryStr.indexOf('?') < 0) {
@@ -74,13 +68,14 @@
                 }
 
                 api.getUrl = function () {
-
+                    debugger;
                     var url = queryStr.split('?')[0];
 
+                    if (url.indexOf('?') < 0) {
+                        url = url + '?';
+                    }
+
                     for (var p in api.queryString) {
-                        if (url.indexOf('?') < 0) {
-                            url = url + '?';
-                        }
                         if (api.queryString[p] != null) {
                             url += p + '=' + api.queryString[p] + "&";
                         }
@@ -89,10 +84,14 @@
                     if (url.lastIndexOf('&') == url.length - 1) {
                         return url.substring(0, url.lastIndexOf('&'));
                     }
+
+                    if (url.lastIndexOf('?') == url.length - 1) {
+                        return url.substring(0, url.lastIndexOf('?'));
+                    }
+
                     return url;
                 }
 
-                apiMap[queryStr] = api;
                 return api;
             }
 

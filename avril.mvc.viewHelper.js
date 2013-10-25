@@ -219,6 +219,7 @@
 
     //init popup when hashchange
     avril.mvc.routes.onHashChange(function () {
+        debugger;
         var hash = (Backbone.history.getHash() || '').replace('#', '');
         var modals = avril.mvc.viewHelper.modal.getModals(hash);
         modals.each(function (modal) {
