@@ -96,33 +96,82 @@
 
     //#endregion
 
-    var getPool = function (poolName) {
-        return function () {
-            var pool = {};
-            pool['_' + poolName] = {};
-            pool[poolName] = function (name, model) {
-                if (!name) { return undefined; }
-                var _models = pool['_' + poolName];
-                if (!_models[name]) {
-                    arguments.length == 1 && (_models[name] = ko.observable());
-                    arguments.length == 2 && (_models[name] = ko.observable(model));
-                } else {
-                    arguments.length == 2 && (_models[name](model));
-                }
-                return _models[name];
+    //#region models
+    (function () {
+        var pools = {
+            '0__hashkey': avril.getHash({})
+        };
+
+        var getPool = function (poolName, parentPool) {
+
+            poolName = poolName || avril.getHash({});
+
+            if (pools[poolName]) {
+                return pools[poolName];
             }
+
+            var pool = pools[poolName] = {
+                __hashkey: avril.getHash({})
+                , _models: {}
+                , model: function (name, model) {
+                    if (!name) { return undefined; }
+                    var _models = this._models;;
+                    if (!_models[name]) {
+                        arguments.length == 1 && (_models[name] = ko.observable());
+                        arguments.length == 2 && (_models[name] = ko.observable(model));
+                    } else {
+                        arguments.length == 2 && (_models[name](model));
+                    }
+                    return _models[name];
+                }
+                , parentPool: parentPool
+                , getPool: function (name) {
+                    return getPool(name, this);
+                }
+            };
+
             return pool;
         };
-    }
 
-    //#region models
-    var models = avril.mvc.models = getPool('model')();
-    models.getPool = getPool('model');
+        var models = avril.mvc.models = getPool('0_default', pools);
+
+        models.pools = pools;
+
+    })();
+    var models = avril.mvc.models;
     //#endregion
 
     //#region controllers
-    var controllers = avril.mvc.controllers = getPool('controller')();
-    controllers.getPool = getPool('controller');
+    var controllers = avril.mvc.controllers = {
+        _controllers: {}
+        , controller: function (name, defineFunc) {
+            var _controllers = this._controllers;
+            switch (arguments.length) {
+                case 0: {
+                    return null;
+                }
+                case 1: {
+                    var controller = avril.object(_controllers).getVal(name);
+                    if (controller) {
+                        return controller();
+                    } else {
+                        throw Error('controller ' + name + ' is undefined.');
+                    }
+                }
+                case 2: {
+                    var contrusctor = defineFunc;
+                    if (typeof defineFunc === 'object') {
+                        contrusctor = function () {
+                            avril.extend(this, defineFunc);
+                        }
+                    }
+                    avril.createlibOn(_controllers, name, contrusctor);
+                    return this;
+                }
+            }
+
+        }
+    };
     //#endregion
 
     //#region request
