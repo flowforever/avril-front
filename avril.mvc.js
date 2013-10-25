@@ -96,40 +96,33 @@
 
     //#endregion
 
-    //#region models
-
-    avril.namespace('avril.mvc.models');
-
-    var models = avril.mvc.models;
-
-    var mvc = avril.mvc, getPool = function () {
-        var pool = {
-            _models: {}
-            , model: function (name, model) {
+    var getPool = function (poolName) {
+        return function () {
+            var pool = {};
+            pool['_' + poolName] = {};
+            pool[poolName] = function (name, model) {
                 if (!name) { return undefined; }
-                if (!pool._models[name]) {
-                    arguments.length == 1 && (pool._models[name] = ko.observable());
-                    arguments.length == 2 && (pool._models[name] = ko.observable(model));
+                var _models = pool['_' + poolName];
+                if (!_models[name]) {
+                    arguments.length == 1 && (_models[name] = ko.observable());
+                    arguments.length == 2 && (_models[name] = ko.observable(model));
                 } else {
-                    arguments.length == 2 && (pool._models[name](model));
+                    arguments.length == 2 && (_models[name](model));
                 }
-                return pool._models[name];
+                return _models[name];
             }
+            return pool;
         };
-        return pool;
-    };
+    }
 
-    var pools = models.pools = getPool();
+    //#region models
+    var models = avril.mvc.models = getPool('model')();
+    models.getPool = getPool('model');
+    //#endregion
 
-    models.getPool = getPool;
-
-    mvc.config.onload(function () {
-        avril.object(config.meta).keys()
-        .each(function (key) {
-            pools.model('meta.' + key, config.meta[key]);
-        });
-    });
-
+    //#region controllers
+    var controllers = avril.mvc.controllers = getPool('controller')();
+    controllers.getPool = getPool('controller');
     //#endregion
 
     //#region request
@@ -241,17 +234,17 @@
 
             var notfound = function () {
                 mvc.request.getViewTemplate('404', function (res) {
-                    mvc.models.pools.model('pageModel')(res);
+                    models.model('pageModel')(res);
                 }, false);
             };
 
-            models.pools.model('currentRoute')(null);
+            models.model('currentRoute')(null);
 
             mvc.request.getViewTemplate(query, function (resTmpl) {
                 if (resTmpl.templateOk) {
                     mvc.request.getViewData(Backbone.history.getHash(), function (resData) {
                         var res = $.extend({}, resTmpl, resData);
-                        mvc.models.pools.model('pageModel')(res);
+                        models.model('pageModel')(res);
                     });
                 } else {
                     notfound();
@@ -259,7 +252,7 @@
             });
         }
     })
-    , addRoute = routes.addRoute = function (name, route, viewPath, func, needDataOrDataPath) {        
+    , addRoute = routes.addRoute = function (name, route, viewPath, func, needDataOrDataPath) {
         if (route.indexOf('?') < 0) {
             addRoute(name, route + '?*query', viewPath, func, needDataOrDataPath);
         }
@@ -275,7 +268,7 @@
 
         appRoute.route(route, name, function (query) {
             var routeArgs = arguments;
-            models.pools.model('currentRoute')({
+            models.model('currentRoute')({
                 name: name
                 , route: route
                 , viewPath: viewPath
@@ -284,12 +277,12 @@
                 if (needData) {
                     mvc.request.getViewData(dataPath || Backbone.history.getHash(), function (resData) {
                         var res = $.extend({}, resTmpl, resData);
-                        mvc.models.pools.model('pageModel')(res);
-                        func.apply(mvc.models.pools, routeArgs);
+                        models.model('pageModel')(res);
+                        func.apply(mvc, routeArgs);
                     });
                 } else {
-                    mvc.models.pools.model('pageModel')(resTmpl);
-                    func.apply(mvc.models.pools, routeArgs);
+                    models.model('pageModel')(resTmpl);
+                    func.apply(mvc, routeArgs);
                 }
             });
         });
@@ -310,7 +303,6 @@
 
     //#region 
 
-
     //start running avril.mvc
     $(function () {
 
@@ -318,7 +310,7 @@
         Backbone.history.start();
 
         //do init 
-        ko.applyBindings(avril.mvc.models.pools, document.body);
+        ko.applyBindings(mvc, document.body);
     });
     //#endregion
 })(jQuery);

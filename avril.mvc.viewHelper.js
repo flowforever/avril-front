@@ -25,7 +25,7 @@
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 var $element = $(element);
                 $element.unbind('click').click(function (e) {
-                    
+
                     e.preventDefault();
                     var options = ko.utils.unwrapObservable(valueAccessor()) || {};
                     viewHelper.pop($element.attr('href'), $.extend({ title: '...' }, options));
@@ -161,9 +161,9 @@
                 needData: true
             }, popOptions));
 
-            var pools = pop.modalPool = avril.mvc.models.getPool();
-
-            pools.rootPools = avril.mvc.models.pools;
+            var pools = $.extend(avril.mvc.models.getPool(), {
+                rootPools: avril.mvc
+            });
 
             pop.show.onShow(function () {
                 var hash = Backbone.history.getHash();
@@ -187,13 +187,17 @@
                         console.log(config);
                     } catch (E) { }
                 }
-
                 if (pop.options().needData) {
                     request.getViewData(url, function (res) {
                         pools.model('dialogModel')(res);
                     });
                 }
-                console.log(pools);
+                if (pop.options().controller) {
+                    pools.controller = avril.mvc.controllers.controller(pop.options().controller);
+                }
+                if (pop.options().model) {
+                    pools.controller = avril.mvc.models.model(pop.options().model);
+                }
                 ko.applyBindings(pools, pop.$pop()[0]);
             });
 
@@ -219,7 +223,6 @@
 
     //init popup when hashchange
     avril.mvc.routes.onHashChange(function () {
-        debugger;
         var hash = (Backbone.history.getHash() || '').replace('#', '');
         var modals = avril.mvc.viewHelper.modal.getModals(hash);
         modals.each(function (modal) {

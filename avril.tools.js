@@ -68,7 +68,6 @@
                 }
 
                 api.getUrl = function () {
-                    debugger;
                     var url = queryStr.split('?')[0];
 
                     if (url.indexOf('?') < 0) {
