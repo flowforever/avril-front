@@ -25,10 +25,9 @@
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 var $element = $(element);
                 $element.unbind('click').click(function (e) {
-
                     e.preventDefault();
                     var options = ko.utils.unwrapObservable(valueAccessor()) || {};
-                    viewHelper.pop($element.attr('href'), $.extend({ title: '...' }, options));
+                    viewHelper.pop(options.url || $element.attr('href'), $.extend({ title: '...' }, options));
                 });
             },
             update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
@@ -36,7 +35,7 @@
                 $element.unbind('click').click(function (e) {
                     e.preventDefault();
                     var options = ko.utils.unwrapObservable(valueAccessor()) || {};
-                    viewHelper.pop($element.attr('href'), $.extend({ title: '...' }, options));
+                    viewHelper.pop(options.url || $element.attr('href'), $.extend({ title: '...' }, options));
                 });
             }
         };
@@ -184,11 +183,10 @@
                     try {
                         var config = eval('(' + $configScript.text() + ')');
                         pop.options(config);
-                        console.log(config);
                     } catch (E) { }
                 }
                 if (pop.options().needData) {
-                    request.getViewData(url, function (res) {
+                    request.getViewData(url || pop.options().dataUrl, function (res) {
                         pools.model('dialogModel')(res);
                     });
                 }
