@@ -203,7 +203,7 @@ avril.namespace('avril.ui');
                 initTitle(config.title);
 
                 self.events.onLoadHandle(function () {
-                    $body().find('.close,.close-pop,button[type=reset]').click(function () {
+                    $body().find('.close-pop').click(function () {
                         self.hide();
                     });
                     initSize(config.width, config.height);

@@ -192,12 +192,6 @@
                         pools.model('dialogModel')(res);
                     });
                 }
-                if (pop.options().controller) {
-                    pools.controller = avril.mvc.controllers.controller(pop.options().controller);
-                }
-                if (pop.options().model) {
-                    pools.controller = avril.mvc.models.model(pop.options().model);
-                }
                 ko.applyBindings(pools, pop.$pop()[0]);
             });
 
