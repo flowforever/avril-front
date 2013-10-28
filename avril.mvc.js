@@ -301,7 +301,7 @@
             });
         }
     })
-    , addRoute = routes.addRoute = function (name, route, viewPath, func, needDataOrDataPath) {
+    , addRoute = routes.addRoute = function (name, route, viewPathc, needDataOrDataPath, fun) {
         if (route.indexOf('?') < 0) {
             addRoute(name, route + '?*query', viewPath, func, needDataOrDataPath);
         }
