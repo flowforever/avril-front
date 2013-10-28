@@ -144,7 +144,7 @@
     //#region controllers
     var controllers = avril.mvc.controllers = {
         _controllers: {}
-        , controller: function (name, defineFunc) {
+        , controller: function (name, defineFunc, baseClass) {
             var _controllers = this._controllers;
             switch (arguments.length) {
                 case 0: {
@@ -158,18 +158,19 @@
                         throw Error('controller ' + name + ' is undefined.');
                     }
                 }
-                case 2: {
+                case 2:
+                case 3:
+                    {
                     var contrusctor = defineFunc;
                     if (typeof defineFunc === 'object') {
                         contrusctor = function () {
                             avril.extend(this, defineFunc);
                         }
                     }
-                    avril.createlibOn(_controllers, name, contrusctor);
+                    avril.createlibOn(_controllers, name, contrusctor, null, baseClass);
                     return this;
                 }
             }
-
         }
     };
     //#endregion
@@ -301,7 +302,7 @@
             });
         }
     })
-    , addRoute = routes.addRoute = function (name, route, viewPathc, needDataOrDataPath, fun) {
+    , addRoute = routes.addRoute = function (name, route, viewPath, needDataOrDataPath, func) {
         if (route.indexOf('?') < 0) {
             addRoute(name, route + '?*query', viewPath, func, needDataOrDataPath);
         }
@@ -343,6 +344,10 @@
     , appRoute = routes.mvcRoute = new routes.mvcRoute();
 
     routes.onHashChange = avril.event.get('avril.mvc.routes.onhashchange', routes);
+
+    routes.getHash = function () {
+        return Backbone.history.getHash();
+    }
 
     Backbone.history.bind('all', function () {
         routes.onHashChange([]);

@@ -15,10 +15,9 @@
     })();
 
     avril.validator.extend({
-        init: function (form) {
-        }
-        , parseForm: function ($form) {
+        parseForm: function ($form) {
             var self = this;
+            $form = $($form);
             $form.each(function () {
                 $(this).validate(self.getValidObj($(this)));
             });

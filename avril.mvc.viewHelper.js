@@ -39,6 +39,58 @@
                 });
             }
         };
+        ko.bindingHandlers.confirm = {
+            init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var $element = $(element);
+                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
+                $element.unbind('click').click(function () {
+                    avril.confirm(options.msg, options.func);
+                });
+            }
+            , update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var $element = $(element);
+                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
+                $element.unbind('click').click(function () {
+                    avril.confirm(options.msg, options.func);
+                });
+            }
+        }
+        ko.bindingHandlers.confirmPost = {
+            init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var $element = $(element);
+                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
+                $element.unbind('click').click(function () {
+                    avril.confirm(options.msg, function (r) {
+                        r && $.post(options.url || $element.attr('href'), options.func);
+                    });
+                });
+            }
+            , update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var $element = $(element);
+                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
+                $element.unbind('click').click(function () {
+                    avril.confirm(options.msg, function (r) {
+                        r && $.post(options.url || $element.attr('href'), options.func);
+                    });
+                });
+            }
+        };
+        ko.bindingHandlers.alert = {
+            init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var $element = $(element);
+                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
+                $element.unbind('click').click(function () {
+                    avril.confirm(options.msg, options.func);
+                });
+            }
+            , update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var $element = $(element);
+                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
+                $element.unbind('click').click(function () {
+                    avril.confirm(options.msg, options.func);
+                });
+            }
+        }
     })();
 
     /*parital*/
