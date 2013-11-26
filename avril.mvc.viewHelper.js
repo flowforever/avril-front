@@ -199,14 +199,14 @@
             });
 
             pop.show.onShow(function () {
-                var hash = Backbone.history.getHash();
+                var hash = avril.mvc.routes.getHash();
                 var newHash = viewHelper.modal.addToUrl(hash, url);
                 Backbone.history.navigate(newHash, false);
             });
 
             pop.hide.onHide(function () {
                 popCache[url] = undefined;
-                var hash = Backbone.history.getHash();
+                var hash = avril.mvc.routes.getHash();
                 var newHash = viewHelper.modal.removeFromUrl(hash, url);
                 Backbone.history.navigate(newHash, false);
             });
