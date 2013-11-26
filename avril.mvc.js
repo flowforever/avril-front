@@ -161,15 +161,15 @@
                 case 2:
                 case 3:
                     {
-                    var contrusctor = defineFunc;
-                    if (typeof defineFunc === 'object') {
-                        contrusctor = function () {
-                            avril.extend(this, defineFunc);
+                        var contrusctor = defineFunc;
+                        if (typeof defineFunc === 'object') {
+                            contrusctor = function () {
+                                avril.extend(this, defineFunc);
+                            }
                         }
+                        avril.createlibOn(_controllers, name, contrusctor, null, baseClass);
+                        return this;
                     }
-                    avril.createlibOn(_controllers, name, contrusctor, null, baseClass);
-                    return this;
-                }
             }
         }
     };
@@ -304,9 +304,8 @@
     })
     , addRoute = routes.addRoute = function (name, route, viewPath, needDataOrDataPath, func) {
         if (route.indexOf('?') < 0) {
-            addRoute(name, route + '?*query', viewPath, func, needDataOrDataPath);
+            addRoute(name, route + '?*query', viewPath, needDataOrDataPath, func);
         }
-
         var needData, dataPath;
         if (needDataOrDataPath && typeof (needDataOrDataPath) === 'string') {
             dataPath = needDataOrDataPath;
@@ -325,7 +324,19 @@
             });
             mvc.request.getViewTemplate(viewPath, function (resTmpl) {
                 if (needData) {
-                    mvc.request.getViewData(dataPath || Backbone.history.getHash(), function (resData) {
+
+                    var url = Backbone.history.getHash();
+
+                    if (dataPath) {
+                        var req = avril.request(dataPath);
+                        var qReq = avril.request('?' + query);
+                        for (var k in qReq.queryString) {
+                            req.param(k, qReq.param(k));
+                        }
+                        url = req.getUrl();
+                    }
+
+                    mvc.request.getViewData(url, function (resData) {
                         var res = $.extend({}, resTmpl, resData);
                         models.model('pageModel')(res);
                         func.apply(mvc, routeArgs);

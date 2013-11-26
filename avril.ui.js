@@ -341,7 +341,7 @@ avril.namespace('avril.ui');
             var top = 0, left = 0;
 
             if (winHeight > popHeight) {
-                top = (winHeight - popHeight) / 2;
+                top = (winHeight - popHeight) / 2 + $(window).scrollTop();
             }
 
             $popWin.css({

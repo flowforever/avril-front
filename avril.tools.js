@@ -76,7 +76,7 @@
 
                     for (var p in api.queryString) {
                         if (api.queryString[p] != null) {
-                            url += p + '=' + api.queryString[p] + "&";
+                            url += p + '=' + encodeURI(api.queryString[p]) + "&";
                         }
                     }
 

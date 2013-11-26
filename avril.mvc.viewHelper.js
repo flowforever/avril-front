@@ -12,9 +12,6 @@
         ko.bindingHandlers.oninit = {
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 !$(element).data(dataKey) && valueAccessor() && $(element).ready(valueAccessor()(element, viewModel)) && $(element).data(dataKey, true);
-            },
-            update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-                !$(element).data(dataKey) && valueAccessor() && $(element).ready(valueAccessor()(element, viewModel)) && $(element).data(dataKey, true);
             }
         };
     })();
@@ -24,15 +21,7 @@
         ko.bindingHandlers.pop = {
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 var $element = $(element);
-                $element.unbind('click').click(function (e) {
-                    e.preventDefault();
-                    var options = ko.utils.unwrapObservable(valueAccessor()) || {};
-                    viewHelper.pop(options.url || $element.attr('href'), $.extend({ title: '...' }, options));
-                });
-            },
-            update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-                var $element = $(element);
-                $element.unbind('click').click(function (e) {
+                $element.click(function (e) {
                     e.preventDefault();
                     var options = ko.utils.unwrapObservable(valueAccessor()) || {};
                     viewHelper.pop(options.url || $element.attr('href'), $.extend({ title: '...' }, options));
@@ -100,55 +89,48 @@
         </div>
         */
         ko.bindingHandlers.partial = {
-            init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                console.log('fuck');
                 var options = ko.utils.unwrapObservable(valueAccessor()) || {};
                 if (typeof options === 'string') {
                     options = {
                         view: options
                     };
                 }
-
-                avril.mvc.request.getViewTemplate(options.view, function (resTmpl) {
+                var renderTemplate = function (resTmpl) {
+                    ko.virtualElements.emptyNode(element);
                     if (options.data) {
-                        avril.mvc.request.getViewData(options.data, function (data) {
-                            ko.bindingHandlers.template.init(element, ko.observable({
-                                name: resTmpl.template
-                                , data: data
-                            }), allBindingsAccessor, viewModel, bindingContext);
-                        });
+                        if (typeof (options.data) === 'object') {
+                            var innerBindingContext = bindingContext['createChildContext'](options.data, options['as']);
+                            ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element);
+                        } else if (typeof (options.data) === 'string') {
+                            avril.mvc.request.getViewData(options.data, function (data) {
+                                var innerBindingContext = bindingContext['createChildContext'](data, options['as']);
+                                ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element);
+                            });
+                        }
                     } else {
-                        ko.bindingHandlers.template.init(element, ko.observable({
-                            name: resTmpl.template
-                        }), allBindingsAccessor, viewModel, bindingContext);
+                        ko.renderTemplate(resTmpl.template || element, bindingContext, options, element);
                     }
-                });
-            }
-            , update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-                var options = ko.utils.unwrapObservable(valueAccessor()) || {};
-                if (typeof options === 'string') {
-                    options = {
-                        view: options
-                    };
+                };
+                if (options.view) {
+                    avril.mvc.request.getViewTemplate(options.view, renderTemplate);
+                } else {
+                    renderTemplate({});
                 }
-                avril.mvc.request.getViewTemplate(options.view, function (resTmpl) {
-                    if (options.data) {
-                        avril.mvc.request.getViewData(options.data, function (data) {
-                            ko.bindingHandlers.template.update(element, ko.observable({
-                                name: resTmpl.template
-                                , data: data
-                            }), allBindingsAccessor, viewModel, bindingContext);
-                        });
-                    } else {
-                        ko.bindingHandlers.template.update(element, ko.observable({
-                            name: resTmpl.template
-                        }), allBindingsAccessor, viewModel, bindingContext);
-                    }
-                });
             }
         };
-
         ko.virtualElements.allowedBindings['partial'] = true;
     })();
+
+
+    /*post*/
+    (function () {
+        ko.bindingHandlers.post = {
+            init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) { }
+        };
+    })();
+
     //#endregion
 
     //#region popup
@@ -214,6 +196,7 @@
 
             var pools = $.extend(avril.mvc.models.getPool(), {
                 rootPools: avril.mvc
+                , pop: pop
             });
 
             pop.show.onShow(function () {
@@ -250,7 +233,6 @@
             request.getViewTemplate(url, function (res) {
                 pop.options('content', $('#' + res.template).html());
             });
-
         }
     }
 
