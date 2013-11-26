@@ -90,7 +90,6 @@
         */
         ko.bindingHandlers.partial = {
             update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-                console.log('fuck');
                 var options = ko.utils.unwrapObservable(valueAccessor()) || {};
                 if (typeof options === 'string') {
                     options = {
@@ -102,19 +101,19 @@
                     if (options.data) {
                         if (typeof (options.data) === 'object') {
                             var innerBindingContext = bindingContext['createChildContext'](options.data, options['as']);
-                            ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element);
+                            ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element, 'replaceNode');
                         } else if (typeof (options.data) === 'string') {
                             avril.mvc.request.getViewData(options.data, function (data) {
                                 var innerBindingContext = bindingContext['createChildContext'](data, options['as']);
-                                ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element);
+                                ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element, 'replaceNode');
                             });
                         }
                     } else {
-                        ko.renderTemplate(resTmpl.template || element, bindingContext, options, element);
+                        ko.renderTemplate(resTmpl.template || element, bindingContext, options, element, 'replaceNode');
                     }
                 };
                 if (options.view) {
-                    avril.mvc.request.getViewTemplate(options.view, renderTemplate);
+                    avril.mvc.request.getViewTemplate(options.view, renderTemplate, 'replaceNode');
                 } else {
                     renderTemplate({});
                 }
