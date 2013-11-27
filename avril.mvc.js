@@ -268,6 +268,7 @@
         });
     }
 
+    config.ensure(request, 'getViewTemplate,getViewData');
     //#endregion
 
     //#region routes
