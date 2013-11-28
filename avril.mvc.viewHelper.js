@@ -101,19 +101,19 @@
                     if (options.data) {
                         if (typeof (options.data) === 'object') {
                             var innerBindingContext = bindingContext['createChildContext'](options.data, options['as']);
-                            ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element, 'replaceNode');
+                            ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element, "replaceNode");
                         } else if (typeof (options.data) === 'string') {
                             avril.mvc.request.getViewData(options.data, function (data) {
                                 var innerBindingContext = bindingContext['createChildContext'](data, options['as']);
-                                ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element, 'replaceNode');
+                                ko.renderTemplate(resTmpl.template || element, innerBindingContext, options, element, "replaceNode");
                             });
                         }
                     } else {
-                        ko.renderTemplate(resTmpl.template || element, bindingContext, options, element, 'replaceNode');
+                        ko.renderTemplate(resTmpl.template || element, bindingContext, options, element, "replaceNode");
                     }
                 };
                 if (options.view) {
-                    avril.mvc.request.getViewTemplate(options.view, renderTemplate, 'replaceNode');
+                    avril.mvc.request.getViewTemplate(options.view, renderTemplate);
                 } else {
                     renderTemplate({});
                 }
@@ -191,6 +191,7 @@
 
             var pop = popCache[url] = avril.ui.pop($.extend(true, {
                 needData: true
+                , esc: true
             }, popOptions));
 
             var pools = $.extend(avril.mvc.models.getPool(), {

@@ -159,6 +159,7 @@ avril.namespace('avril.ui');
             , effectTime: 450
             , easing: 'easeInExpo'
             , title: ''
+            , esc: true
         }, options)
         , disabled = false
         , self = this
@@ -397,6 +398,9 @@ avril.namespace('avril.ui');
 
         this.show.onShow(function () {
             setTimeout(makePositionCenter, 500);
+            $body().on('keyup', 'input,textarea,select', function (e) {
+                e.stopPropagation();
+            });
         });
 
         $(window).resize(makePositionCenter);
@@ -572,6 +576,15 @@ avril.namespace('avril.ui');
             return popList && popList.length ? popList[popList.length - 1] : null;
         }
     };
+
+    $(window).keyup(function (e) {
+        if (e.keyCode == 27) {
+            var currentPop = avril.ui.popContext.getCurrent();
+            if (currentPop && currentPop.options().esc) {
+                currentPop.hide();
+            }
+        }
+    });
 })(jQuery, avril);
 //#endregion
 

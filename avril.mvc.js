@@ -7,11 +7,9 @@
 
     //#region config 
 
-    avril.namespace('avril.mvc.config');
+    var config = avril.namespace('avril.mvc.config');
 
     var configUrl = '/resources/config';
-
-    var config = avril.mvc.config;
 
     $.extend(config, {
         templateUrl: '/resources/template'
@@ -62,7 +60,6 @@
             avril.tools.cache('version', config.version);
             avril.mvc.config.onVersionChange([oldVersion, config.version]);
         }
-        avril.release = config.release;
     });
 
     /* make it easy for some method may depend on config loaded , 
@@ -176,9 +173,7 @@
     //#endregion
 
     //#region request
-    avril.namespace('avril.mvc.request');
-
-    var request = avril.mvc.request;
+    var request = avril.namespace('avril.mvc.request');
     var config = avril.mvc.config;
     var templatePre = 'template-';
 
@@ -197,19 +192,15 @@
 
     request.getViewTemplate = function (url, callback) {
         callback = callback || function () { };
-        var res = {
-            data: null
-            , template: undefined
-            , templateOk: false
-        }
-        , path = url.split('?')[0]
+        var path = url.split('?')[0]
         , templateName = templatePre + config.version + '-' + (path.split('/').join('-') || 'home')
-        , $template = $('#' + templateName)
+        , $template = function () { return $('#' + templateName) }
         , templateCache = avril.tools.cache(templateName)
         , queryTemplate = function (path, callback) {
             request.getTemplateUrl(path, function (viewUrl) {
                 $.ajax({
                     url: viewUrl
+                    , dataType: 'html'
                     , success: function (tmpl) {
                         avril.tools.cache(templateName, tmpl);
                         callback();
@@ -221,16 +212,20 @@
             });
         }
         , returnCallback = function () {
-            $template = $('#' + templateName);
+            var res = {
+                data: null
+                , template: undefined
+                , templateOk: false
+            };
 
-            templateCache = avril.tools.cache(templateName);
+            var templateCache = avril.tools.cache(templateName);
 
             if (templateCache) {
-
-                if ($template.length == 0) {
+                $template().remove();
+                if ($template().length == 0) {
                     var tagName = 'script';
                     $('<' + tagName + ' type="text/template"/>').attr('id', templateName).hide()
-                        .html(templateCache).appendTo('body');
+                        .text(templateCache).appendTo('body');
                 }
 
                 res.template = templateName;
@@ -271,12 +266,17 @@
     config.ensure(request, 'getViewTemplate,getViewData');
     //#endregion
 
+    //region events
+    var events = avril.namespace('avril.mvc.events');
+    //#endregion
+
     //#region routes
 
     avril.namespace('avril.mvc.routes');
 
     var routes = avril.mvc.routes
     , mvc = avril.mvc
+    , _reload
     , AppRoute = routes.mvcRoute = Backbone.Router.extend({
         routes: {
             '*normalPath': 'normalPath'
@@ -293,10 +293,12 @@
 
             mvc.request.getViewTemplate(query, function (resTmpl) {
                 if (resTmpl.templateOk) {
-                    mvc.request.getViewData(Backbone.history.getHash(), function (resData) {
-                        var res = $.extend({}, resTmpl, resData);
-                        models.model('pageModel')(res);
-                    });
+                    (_reload = function () {
+                        mvc.request.getViewData(Backbone.history.getHash(), function (resData) {
+                            var res = $.extend({}, resTmpl, resData);
+                            models.model('pageModel')(res);
+                        });
+                    })();
                 } else {
                     notfound();
                 }
@@ -337,12 +339,15 @@
                         url = req.getUrl();
                     }
 
-                    mvc.request.getViewData(url, function (resData) {
-                        var res = $.extend({}, resTmpl, resData);
-                        models.model('pageModel')(res);
-                        func.apply(mvc, routeArgs);
-                    });
+                    (_reload = function () {
+                        mvc.request.getViewData(url, function (resData) {
+                            var res = $.extend({}, resTmpl, resData);
+                            models.model('pageModel')(res);
+                            func.apply(mvc, routeArgs);
+                        })
+                    })();
                 } else {
+                    _reload = undefined;
                     models.model('pageModel')(resTmpl);
                     func.apply(mvc, routeArgs);
                 }
@@ -359,6 +364,10 @@
 
     routes.getHash = function () {
         return Backbone.history.getHash();
+    }
+
+    routes.reload = function () {
+        _reload && _reload(new Date());
     }
 
     Backbone.history.bind('all', function () {

@@ -114,15 +114,16 @@
                             obj[first] = new Object();
                             _extendMethod(obj[first]);
                         }
-                        _creatObject(objName.substring(objName.indexOf(".") + 1), obj[first]);
+                        return _creatObject(objName.substring(objName.indexOf(".") + 1), obj[first]);
                     } else {
                         if (!obj[objName]) {
                             obj[objName] = new Object();
                             _extendMethod(obj[objName]);
+                            return obj[objName];
                         }
                     }
                 }
-                _creatObject(spaceName, obj || window);
+                return _creatObject(spaceName, obj || window);
             }
             else {
                 throw " typeof(spaceName) must be string!";
