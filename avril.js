@@ -703,6 +703,9 @@
             _self[funName]['_orgFunc'] = _func;
             _self[funName][beforeName] = beforeFunc;
             _self[funName][onName] = onFunc;
+            for (var k in _func) {
+                _self[funName][k] = avril.isFunc(_func[k]) ? _func[k].bind(_func) : _func[k];
+            }
             return _self;
         }
 

@@ -137,7 +137,7 @@ avril.namespace('avril.ui');
 (function ($, avril) {
     //#region private
     var popList = []
-    , _divStr = '<div style="display:none;"><div class="modal-backdrop fade in"></div> \
+    , _divStr = '<div style="display:none;" class="row"><div class="modal-backdrop fade in"></div> \
                  <div class="modal"> \
                   <div class="modal-header"> \
                     <button type="button" class="close">×</button> \
@@ -153,10 +153,10 @@ avril.namespace('avril.ui');
         var config = $.extend(this.options(), {
             autoSize: true
             , $handle: null
-            , draggable: true
+            , draggable: false
             , resizable: true
             , effect: 'puff'
-            , effectTime: 450
+            , effectTime: 250
             , easing: 'easeInExpo'
             , title: ''
             , esc: true
@@ -261,6 +261,7 @@ avril.namespace('avril.ui');
 
                     self.$pop().find('.modal').css('z-index', avril.ui.getZindex() + 1);
 
+                    makePositionCenter();
                 });
 
             this.$pop().find('.close,.close-pop,button[type=reset]').click(function () {
@@ -305,9 +306,20 @@ avril.namespace('avril.ui');
         var initDraggable = function () {
             self.$pop().find('.modal').draggable({ handle: ".modal-header h3" });
             if (!config.draggable) {
+                self.$pop().find('.modal').css({
+                    'position': 'fixed'
+                });
                 self.$pop().find('.modal').draggable('disable');
+                self.$pop().find('.modal h3').css({ cursor: 'default' });
                 self.$pop().find('.modal').removeClass('ui-state-disabled');
+            } else {
+                self.$pop().find('.modal').draggable('enable');
+                self.$pop().find('.modal').css({
+                    'position': 'absolute'
+                });
+                self.$pop().find('.modal h3').css({ cursor: 'move' });
             }
+            makePositionCenter();
         }
 
         var initResizable = function () {
@@ -325,6 +337,7 @@ avril.namespace('avril.ui');
             if (height !== undefined) {
                 $modal().height(height);
             }
+
         }
 
         var initTitle = function (title) {
@@ -342,13 +355,18 @@ avril.namespace('avril.ui');
             var top = 0, left = 0;
 
             if (winHeight > popHeight) {
-                top = (winHeight - popHeight) / 2 + $(window).scrollTop();
+                top = (winHeight - popHeight) / 2 + (config.draggable ? $(window).scrollTop() : 0);
             }
 
-            $popWin.css({
-                position: 'absolute'
-                , top: top + 'px'
+            if (winWidth > popWidth) {
+                left = (winWidth - popWidth) / 2
+            }
+
+            $popWin.clearQueue().animate({
+                top: top + 'px'
+                , left: left + 'px'
             });
+
         }
 
         this.makePositionCenter = makePositionCenter;
@@ -397,7 +415,7 @@ avril.namespace('avril.ui');
         });
 
         this.show.onShow(function () {
-            setTimeout(makePositionCenter, 500);
+            setTimeout(makePositionCenter, 700);
             $body().on('keyup', 'input,textarea,select', function (e) {
                 e.stopPropagation();
             });
@@ -441,6 +459,7 @@ avril.namespace('avril.ui');
                         }
                     }
                     $('<a href="javascript:;"/>').addClass(cls).html(text).localize()
+                        .attr('data-btn-name',name)
                     .click(function () {
                         self.onButtonClick([name, $(this)]);
                     }).appendTo($buttonArea);
@@ -455,18 +474,16 @@ avril.namespace('avril.ui');
     avril.alert = function (msg, func) {
         func = func || function () { }
         var $alert = avril.ui.pop({
-            width: 300
-            , height: 200
-            , resizable: false
+            resizable: false
             , alert: 'Alert'
             , title: 'Alert'
             , buttons: [
-                { text: 'OK', name: 'OK', cls: 'btn btn-primary' }
+                { text: avril.alert.text['OK'] || 'OK', name: 'OK', cls: 'btn btn-primary' }
             ]
             , showFooter: true
         }).init();
 
-        $alert.$header().find('h3').localize()
+        $alert.$header().find('h3').html( avril.alert.text['Alert'] || 'Alert' );
 
         initDialog($alert);
 
@@ -477,26 +494,31 @@ avril.namespace('avril.ui');
         });
         $alert.$pop().find('a:eq(0)').focus();
     }
+    avril.alert.text = {
+        OK:'确定'
+        , 'Alert':'警告'
+    };
 
     avril.confirm = function (msg, func) {
         func = func || function () { }
         var $confirm = avril.ui.pop({
-            width: 320
-            , height: 180
-            , resizable: false
+            resizable: false
             , title: 'Confirm'
             , buttons: [
-                 { text: 'Confirm', name: 'Confirm', cls: 'btn btn-primary' },
-                 { text: 'Cancel', name: 'Cancel', cls: 'btn btn-danger' },
+                 { text: avril.confirm.text['Confirm'] || 'Confirm', name: 'Confirm', cls: 'btn btn-primary' },
+                 { text: avril.confirm.text['Cancel'] || 'Cancel', name: 'Cancel', cls: 'btn btn-danger' },
             ]
             , showFooter: true
         }).init();
 
-        $confirm.$header().find('h3').localize()
+        $confirm.$header().find('h3').html( avril.confirm.text['Confirm'] || 'Confirm' );
 
         initDialog($confirm);
 
         $confirm.options('content', msg).show();
+        $confirm.show.onShow(function(){
+            $confirm.$pop().find('[data-btn-name="Confirm"]').focus();
+        });
         $confirm.onButtonClick(function (name, $el) {
             switch (name) {
                 case 'Confirm': {
@@ -514,12 +536,15 @@ avril.namespace('avril.ui');
         $confirm.$pop().find('a:eq(0)').focus();
     }
 
+    avril.confirm.text = {
+        'Confirm':'确认'
+        , 'Cancel':'取消'
+    };
+
     avril.prompt = function (msg, func, defaultValue) {
         func = func || function () { }
         var $confirm = avril.ui.pop({
-            width: 320
-            , height: 180
-             , resizable: false
+            resizable: false
             , title: 'Prompt'
             , buttons: [
                  { text: 'Ok', name: 'Ok', cls: 'btn btn-primary' },
@@ -1037,15 +1062,17 @@ avril.namespace('avril.ui');
 //#region avril.ui.getZindex 
 (function () {
     avril.ui.getZindex = function () {
-        return $('*')
-            .toArray()
-            .select(function (el) {
+        var elArr = $('*').toArray();
+
+        var zIndex = elArr.select(function (el) {
                 var zIndex = $(el).css('z-index');
                 if (zIndex && !isNaN(zIndex)) {
                     return parseInt(zIndex);
                 }
                 return 0;
-            }).sort().pop();
+        }).sort().pop();
+
+        return zIndex;
     }
 })();
 //#endregion

@@ -15,6 +15,7 @@
         templateUrl: '/resources/template'
         , release: false
         , configUrl: configUrl
+        , defaultLoadData: false
     });
 
     /* load config from server */
@@ -170,6 +171,63 @@
             }
         }
     };
+    //base form controller
+
+    controllers.controller('avril.common.formBase', function (options) {
+
+        var _fields = {}, controller = this;
+
+        this.init = function (postUrl, model) {
+            model && this.model(model);
+            postUrl && this.postUrl(postUrl);
+            return this;
+        }
+
+        this.model = ko.observable();
+        this.postUrl = ko.observable();
+        this.fields = models.getPool();
+        this.fields.field = function (path, val) {
+            if (!_fields[path]) {
+                _fields[path] = this.model(path, val);
+            }
+            var field = _fields[path], _model = controller.model();
+            if (arguments.length == 1 && _model && field() === undefined) {
+                field(avril.object(_model).tryGetVal(path));
+            }
+            return field;
+        }
+        this.getFormData = function () {
+            var formData = {};
+            for (var k in this.fields._models) {
+                avril.object(formData).setVal(k, this.fields.model(k)());
+            }
+            return formData;
+        }
+
+        this.submit = function (event, $el) {
+
+            !this.postUrl() && this.postUrl($el.parents('form').attr('action'));
+
+            if (!this.postUrl()) {
+                throw new Error('post url is required.');
+            }
+            $.post(
+                avril.request(this.postUrl()).param('appId', models.model('meta.selectedApp')()).getUrl()
+                , this.getFormData())
+                .success(function (res, handlerType, handler) {
+                    controller.submit.onSuccess(avril.toArray(arguments));
+                }).error(function (handler, handlerType) {
+                    controller.submit.onError(avril.toArray(arguments));
+                });
+        }
+
+        this.submit.onSuccess = avril.event.get('form.onSuccess', this);
+
+        this.submit.onError = avril.event.get('form.onError', this);
+
+        this.hook('submit,init');
+    });
+
     //#endregion
 
     //#region request
@@ -181,6 +239,19 @@
     config.onVersionChange(function (oldVersion, newVersion) {
         avril.tools.cache.delByPre(templatePre + oldVersion);
     });
+
+    request.queryTemplate = function (viewUrl, callback) {
+        $.ajax({
+            url: viewUrl
+            , dataType: 'html'
+            , success: function (tmpl) {
+                callback(null, tmpl);
+            }
+            , error: function (res) {
+                callback(res);
+            }
+        });
+    }
 
     request.getTemplateUrl = function (path, callback) {
         config.onload(function () {
@@ -198,16 +269,9 @@
         , templateCache = avril.tools.cache(templateName)
         , queryTemplate = function (path, callback) {
             request.getTemplateUrl(path, function (viewUrl) {
-                $.ajax({
-                    url: viewUrl
-                    , dataType: 'html'
-                    , success: function (tmpl) {
-                        avril.tools.cache(templateName, tmpl);
-                        callback();
-                    }
-                    , error: function (res) {
-                        callback(res);
-                    }
+                request.queryTemplate(viewUrl, function (err, tmpl) {
+                    avril.tools.cache(templateName, err ? '' : tmpl);
+                    callback(err, tmpl);
                 });
             });
         }
@@ -224,15 +288,14 @@
                 $template().remove();
                 if ($template().length == 0) {
                     var tagName = 'script';
-                    $('<' + tagName + ' type="text/template"/>').attr('id', templateName).hide()
-                        .text(templateCache).appendTo('body');
+                    $('<' + tagName + ' id="' + templateName + '"' + ' type="text/template">' + templateCache + '</' + tagName + '>').hide().appendTo('body');
                 }
 
                 res.template = templateName;
                 res.templateOk = true;
             }
 
-            callback(res);
+            callback(null, res);
         };
 
         if (templateCache && (config.release === true)) {
@@ -242,24 +305,27 @@
         }
     }
 
+    request.getDataUrl = function (url, callback) {
+        callback(url);
+    }
+
     request.getViewData = function (url, callback) {
-        var res = {
-            url: url
-        };
-        $.ajax({
-            url: url
-            , data: {
-                _backbone: true
-            }
-            , success: function (json) {
-                res.data = json;
-                callback(res);
-            }
-            , error: function (err) {
-                res.err = err;
-                res.data = null;
-                callback(res);
-            }
+        request.getDataUrl(url, function (url) {
+            var res = {
+                url: url
+            };
+            $.ajax({
+                url: url
+                , success: function (json) {
+                    res.data = json;
+                    callback(res);
+                }
+                , error: function (err) {
+                    res.err = err;
+                    res.data = null;
+                    callback(res);
+                }
+            });
         });
     }
 
@@ -268,6 +334,14 @@
 
     //region events
     var events = avril.namespace('avril.mvc.events');
+    events.get = function (name) {
+        return function (event, element) {
+            avril.event.get(name, events)([event, element]);
+        }
+    }
+    events.add = function (name, func) {
+        avril.event.get(name, events)(func);
+    }
     //#endregion
 
     //#region routes
@@ -277,6 +351,8 @@
     var routes = avril.mvc.routes
     , mvc = avril.mvc
     , _reload
+    , mvc_page_model_key = 'mvc.pageModel'
+    , mvc_currentRoute_key = 'mvc.currentRoute'
     , AppRoute = routes.mvcRoute = Backbone.Router.extend({
         routes: {
             '*normalPath': 'normalPath'
@@ -285,19 +361,20 @@
 
             var notfound = function () {
                 mvc.request.getViewTemplate('404', function (res) {
-                    models.model('pageModel')(res);
+                    models.model(mvc_page_model_key)(res);
                 }, false);
             };
 
-            models.model('currentRoute')(null);
+            models.model(mvc_currentRoute_key)(null);
 
             mvc.request.getViewTemplate(query, function (resTmpl) {
                 if (resTmpl.templateOk) {
                     (_reload = function () {
-                        mvc.request.getViewData(Backbone.history.getHash(), function (resData) {
+                        config.defaultLoadData && mvc.request.getViewData(Backbone.history.getHash(), function (resData) {
                             var res = $.extend({}, resTmpl, resData);
-                            models.model('pageModel')(res);
+                            models.model(mvc_page_model_key)(res);
                         });
+                        !config.defaultLoadData && models.model(mvc_page_model_key)(resTmpl);
                     })();
                 } else {
                     notfound();
@@ -314,18 +391,18 @@
             dataPath = needDataOrDataPath;
             needData = true;
         }
-        (arguments.length < 5) && (needData = true);//set needData default true
 
         func = func || function () { };
 
         appRoute.route(route, name, function (query) {
             var routeArgs = arguments;
-            models.model('currentRoute')({
+            models.model(mvc_currentRoute_key)({
                 name: name
                 , route: route
                 , viewPath: viewPath
             });
-            mvc.request.getViewTemplate(viewPath, function (resTmpl) {
+            mvc.request.getViewTemplate(viewPath, function (err, resTmpl) {
+                (needData === undefined) && (needData = config.defaultLoadData);
                 if (needData) {
 
                     var url = Backbone.history.getHash();
@@ -334,7 +411,7 @@
                         var req = avril.request(dataPath);
                         var qReq = avril.request('?' + query);
                         for (var k in qReq.queryString) {
-                            req.param(k, qReq.param(k));
+                            k && qReq.param(k) && req.param(k, qReq.param(k));
                         }
                         url = req.getUrl();
                     }
@@ -342,13 +419,13 @@
                     (_reload = function () {
                         mvc.request.getViewData(url, function (resData) {
                             var res = $.extend({}, resTmpl, resData);
-                            models.model('pageModel')(res);
+                            models.model(mvc_page_model_key)(res);
                             func.apply(mvc, routeArgs);
                         })
                     })();
                 } else {
                     _reload = undefined;
-                    models.model('pageModel')(resTmpl);
+                    models.model(mvc_page_model_key)(resTmpl);
                     func.apply(mvc, routeArgs);
                 }
             });
@@ -385,7 +462,7 @@
         Backbone.history.start();
 
         //do init 
-        ko.applyBindings(mvc, document.body);
+        ko.applyBindings(mvc, document.html);
     });
     //#endregion
 })(jQuery);

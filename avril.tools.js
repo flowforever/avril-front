@@ -456,6 +456,10 @@
 
             this.parse = function (context, force) {
 
+                if(config.enabled == false){
+                    return false;
+                }
+
                 var localizeItems = $(context).is('[data-localize]') ? $(context) : $(force ? '[data-localize]' : '[data-localize][data-localize!=true]', context || 'body');
 
                 var languagePack = avril.tools.cache.list(config.language);
@@ -506,154 +510,6 @@
         avril.tools.localize = avril.tools.Localize();
     })();
 
-    //#endregion
-
-    //#region avril.tools.sql
-    avril.createlib('avril.tools.sql', function (options) {
-        var config = $.extend(true, this.options(), {
-            dbName: null
-        }, options);
-
-        var self = this;
-
-        function init() {
-            self.db = openDatabase('mydb', '1.0', 'Test DB', 2 * 1024 * 1024);
-        }
-
-        function createTable() {
-        }
-
-        this.collection = function (name, callback) { }
-    });
-    //#endregion
-
-    //#region avril.tools.template
-    /*
-    (function () {
-        avril.tools.template = {
-            parse: function () { }
-            , _cacheKey: function (name) {
-                return 'template:' + this.version() + name;
-            }
-            , version: function () {
-                return avril.tools.cache('avril-template-version')
-            }
-            , cacheFromEl: function ($tmpl) {
-                var tempName = $tmpl.attr(this.config.template_data_name);
-                this.cacheTemplate(tempName, $tmpl.html());
-                $tmpl.remove();
-            }
-            , cacheTemplate: function (name, tmpl) {
-                var tempName = this._cacheKey(name);
-                avril.tools.cache(tempName, tmpl);
-            }
-            , get: function (name, callback) {
-                var tmpl = avril.tools.cache(this._cacheKey(name));
-                if (!tmpl) {
-                    this.getRemoteTemplate(name, callback);
-                } else {
-                    callback(tmpl);
-                }
-            }
-            , getRemoteTemplate: function (name, callback) {
-                var self = this;
-                $.get(this.config.url, { name: name }, function (tmpl) {
-                    self.cacheTemplate(name, tmpl);
-                    callback(tmpl);
-                });
-            }
-            , config: {
-                'template_data_name': 'data-tmpl-name'
-                , url: '/template/get'
-                , versionUrl: '/template/version'
-                , enabled: true
-            }
-            , render: function (viewName, options, callback) {
-                var self = this;
-
-                this.get(viewName, function (viewTmpl) {
-
-                    var compiledView;
-
-                    try {
-                        compiledView = self._render(viewTmpl, options);
-                    } catch (E) {
-
-                        compiledView = viewPath + '<br/>';
-
-                        compiledView += E.message + '<br/>';
-
-                        compiledView += E.number;
-                    }
-
-                    if (compiledView) {
-                        compiledView = compiledView.replace(/^\s*|\s*$/g, '').replace(/\r\n/g, '');
-                    }
-
-                    var regObj = getGrammarKeyReg();
-
-                    var layout = regObj.layout.exec(compiledView);
-
-                    if (layout && layout[1]) {
-
-                        compiledView = compiledView.replace(layout[0], '');
-
-                        var layoutTmpl = self.render(layout[1], options);
-
-                        var sections = {}
-                            , _compiledView = compiledView + ''
-                            , currentSection
-                            , _layoutTmpl = layoutTmpl + ''
-                            , sectionPos;
-
-                        while (currentSection = regObj.sectionStart.exec(_compiledView)) {
-                            var startPos = compiledView.indexOf(currentSection[0]) + currentSection[0].length;
-                            var sectionEndFlag = ViewHelper.grammarKey.sectionEnd.replace('sectionName', currentSection[1]);
-                            var endPos = compiledView.indexOf(sectionEndFlag);
-                            sections[currentSection[1]] = compiledView.substring(startPos, endPos);
-                            compiledView = compiledView.replace(sections[currentSection[1]], '');
-                            compiledView = compiledView.replace(currentSection[0], '');
-                            compiledView = compiledView.replace(sectionEndFlag, '');
-                        }
-
-                        while (sectionPos = regObj.section.exec(_layoutTmpl)) {
-                            layoutTmpl = layoutTmpl.replace(sectionPos[0], sections[sectionPos[1]] || '');
-                        }
-
-                        return layoutTmpl.replace(ViewHelper.grammarKey.body, compiledView);
-
-                    } else {
-                        return compiledView;
-                    }
-                });
-
-
-            }
-            , _render: function (viewTmpl, options) {
-                var $temp = $('<div/>');
-                $.tmpl(viewTmpl, options).appendTo($temp);
-                return $temp.html();
-            }
-        };
-
-        $(function () {
-            if (avril.tools.template.config.enabled) {
-                $.get(avril.tools.template.config.versionUrl, function (version) {
-                    if (version != avril.tools.template.version()) {
-                        avril.tools.cache.delByPre('template:');
-                        avril.tools.template.versionChanged = true;
-                    }
-                    avril.tools.cache('avril-template-version', version);
-                });
-                $('script[type="text/html"],[data-tmpl-name]').each(function () {
-                    var $tmpl = $(this);
-                    avril.tools.template.cacheFromEl($tmpl);
-                });
-            }
-        });
-
-    })();
-    */
     //#endregion
 
     (function ($) {

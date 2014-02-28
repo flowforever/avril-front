@@ -1,6 +1,6 @@
 ﻿/// <reference path="../_reference.js" />
 (function ($) {
-    if (!$.validator) { return false;}
+    if (!$.validator) { return false; }
 
     avril.namespace('avril.validator');
 
@@ -9,7 +9,7 @@
 
         $.validator.prototype.showLabel = function (element) {
             var errElements = orgShowLabel.apply(this, arguments);
-            this.errorsFor(element).addClass('help-inline');
+            this.errorsFor(element).addClass('help-block');
             return errElements;
         }
     })();
@@ -24,26 +24,35 @@
             return this;
         }
         , getValidObj: function ($form, validCfg) {
-            validCfg = validCfg || {
-                rules: {}
-                , errorElement: 'span'
-                , messages: {}
-                , success: function (label) {
-                    $(label).parents('div.control-group').removeClass('error').addClass('success');
-                    label.remove();
-                }
-                , errorPlacement: function (label, $el) {
-                    $($el).after(label);
-                    label.addClass('help-inline');
-                    label.hide();
-                    $($el).parents('div.control-group').removeClass('success').addClass('error');
-                }
-            };
+            var cfg = validCfg
+            , errorCls = cfg && cfg.errCls || 'has-error'
+            , successCls = cfg && cfg.errCls || 'has-success'
+            ;
+
+            if (!cfg) {
+                cfg = {
+                    rules: {}
+                    , errorElement: 'small'
+                    , messages: {}
+                    , success: function (label) {
+                        $(label).parent().removeClass(errorCls).addClass(successCls);
+                        label.remove();
+                        label.addClass('help-block');
+                    }
+                    , errorPlacement: function (label, $el) {
+                        $($el).after(label);
+                        label.addClass('help-block');
+                        label.hide();
+                        $($el).parent().removeClass(successCls).addClass(errorCls);
+                    }
+                };
+            }
+
             var self = this;
             $form.find('input,select,textarea').each(function () {
-                self.parseInput($(this), validCfg);
+                self.parseInput($(this), cfg);
             });
-            return validCfg;
+            return cfg;
         }
         , parseInput: function ($input, validCfg) {
             var self = this
@@ -52,6 +61,11 @@
             , attrs = input.attributes
             , attrArr = []
             , pre = 'data-val-';
+
+            if (!inputName) {
+                $input.attr('name', inputName = ('input-name-' + avril.getHash($input)));
+
+            }
 
             if ($input.attr('data-val') && $input.is(':enabled')) {
                 if (!validCfg.rules[inputName]) { validCfg.rules[inputName] = {}; }
