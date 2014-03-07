@@ -13,7 +13,8 @@
         }
         avril.request = (function () {
             function request(queryStr) {
-                var api = {};
+                var api = {
+                };
 
                 api.queryString = (function () {
                     if (queryStr.indexOf('?') < 0) {
@@ -60,7 +61,14 @@
                         return this;
                     }
                     if (arguments.length == 1) {
-                        return getParam(key);
+                        if (typeof key == 'string') {
+                            return getParam(key);
+                        } else if (typeof key == 'object') {
+                            for (var k in key) {
+                                setParam(k,key[k]);
+                            }
+                        }
+                        return this;
                     }
                     if (arguments.length == 2) {
                         return setParam(key, value);
@@ -89,6 +97,10 @@
                     }
 
                     return url;
+                }
+
+                api.toString = function () {
+                    return this.getUrl();
                 }
 
                 return api;
@@ -456,7 +468,7 @@
 
             this.parse = function (context, force) {
 
-                if(config.enabled == false){
+                if (config.enabled == false) {
                     return false;
                 }
 
@@ -512,46 +524,9 @@
 
     //#endregion
 
-    (function ($) {
-        if (!$.tmpl) { return false; }
 
-        $.extend(jQuery.tmpl.tag, {
-            "for": {
-                _default: { $2: "var i=0;i<0;i++" },
-                open: 'for ($2){',
-                close: '};'
-            }
-        });
+    //#region avril.tools.longpull
 
-        avril.tools.template = {
-            render: function ($el, model) {
-
-                $el = $($el);
-
-                var dataKey = 'data-tmpl';
-
-                var templateName = $el.attr(dataKey);
-
-                if (templateName) {
-                    $el.html($.tmpl(templateName, model));
-                } else {
-                    templateName = avril.guid();
-                    $el.attr(dataKey, templateName);
-                    $.template(templateName, $el.html());
-                    $el.html($.tmpl(templateName, model));
-                }
-            }
-        , parse: function (ctx) {
-            ctx = ctx ? $(ctx) : $('body');
-            ctx.find('[type="text/x-jquery-tmpl"]').each(function () {
-                var $el = $(this), templateName = $el.attr('name');
-                $.template(templateName, $el.html());
-                $el.remove();
-            });
-        }
-        };
-    })(jQuery);
-
-
+    //#endregion
 
 })($, avril);

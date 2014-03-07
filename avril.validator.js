@@ -19,6 +19,7 @@
             var self = this;
             $form = $($form);
             $form.each(function () {
+                $.data(this, 'validator', null);
                 $(this).validate(self.getValidObj($(this)));
             });
             return this;
@@ -64,10 +65,9 @@
 
             if (!inputName) {
                 $input.attr('name', inputName = ('input-name-' + avril.getHash($input)));
-
             }
 
-            if ($input.attr('data-val') && $input.is(':enabled')) {
+            if ($input.attr('data-val')==='true' && $input.is(':enabled')) {
                 if (!validCfg.rules[inputName]) { validCfg.rules[inputName] = {}; }
                 if (!validCfg.messages[inputName]) { validCfg.messages[inputName] = {}; }
                 for (var i = 0; i < attrs.length; i++) {

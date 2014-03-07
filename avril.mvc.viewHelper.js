@@ -6,10 +6,16 @@
 
     //#region bindingHandlers
 
-    /*init*/
+    ko.bindingHandlers.stopBinding = {
+        init: function() {
+            return { controlsDescendantBindings: true };
+        }
+    };
+
+    /*oninit*/
     (function ko_inited() {
         var dataKey = 'ko-inited';
-        ko.bindingHandlers.oninit = {
+            ko.bindingHandlers.oninit = {
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 !$(element).data(dataKey) && valueAccessor() && $(element).ready(valueAccessor()(element, viewModel)) && $(element).data(dataKey, true);
             }
@@ -122,14 +128,6 @@
         ko.virtualElements.allowedBindings['partial'] = true;
     })();
 
-
-    /*post*/
-    (function () {
-        ko.bindingHandlers.post = {
-            init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) { }
-        };
-    })();
-
     //#endregion
 
     //#region popup
@@ -190,7 +188,7 @@
         } else {
 
             var pop = popCache[url] = avril.ui.pop($.extend(true, {
-                needData: true
+                needData: false
                 , esc: true
             }, popOptions));
 
@@ -230,7 +228,7 @@
 
             pop.show();
 
-            request.getViewTemplate(url, function (res) {
+            request.getViewTemplate(url, function (err,res) {
                 pop.options('content', $('#' + res.template).html());
             });
         }

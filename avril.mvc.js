@@ -116,7 +116,8 @@
                     var _models = this._models;;
                     if (!_models[name]) {
                         arguments.length == 1 && (_models[name] = ko.observable());
-                        arguments.length == 2 && (_models[name] = ko.observable(model));
+                        !(model instanceof Array) && arguments.length == 2 && (_models[name] = ko.observable(model));
+                        (model instanceof Array) && arguments.length == 2 && (_models[name] = ko.observableArray(model));
                     } else {
                         arguments.length == 2 && (_models[name](model));
                     }
@@ -215,6 +216,7 @@
                 avril.request(this.postUrl()).param('appId', models.model('meta.selectedApp')()).getUrl()
                 , this.getFormData())
                 .success(function (res, handlerType, handler) {
+                    if( controller.submit.beforeSuccess(avril.toArray(arguments)))
                     controller.submit.onSuccess(avril.toArray(arguments));
                 }).error(function (handler, handlerType) {
                     controller.submit.onError(avril.toArray(arguments));
@@ -222,6 +224,8 @@
         }
 
         this.submit.onSuccess = avril.event.get('form.onSuccess', this);
+
+        this.submit.beforeSuccess = avril.event.get('form.beforeSuccess', this);
 
         this.submit.onError = avril.event.get('form.onError', this);
 
@@ -309,18 +313,27 @@
         callback(url);
     }
 
+    request.events = {
+        dataQueryStart: avril.event.get('dataQueryStart', request),
+        dataQuerySuccess: avril.event.get('dataQuerySuccess', request),
+        dataQueryError: avril.event.get('dataQueryError', request)
+    };
+
     request.getViewData = function (url, callback) {
         request.getDataUrl(url, function (url) {
             var res = {
                 url: url
             };
+            request.events.dataQueryStart([res]);
             $.ajax({
                 url: url
                 , success: function (json) {
+                    request.events.dataQuerySuccess([json]);
                     res.data = json;
                     callback(res);
                 }
                 , error: function (err) {
+                    request.events.dataQueryError([err]);
                     res.err = err;
                     res.data = null;
                     callback(res);
@@ -417,7 +430,12 @@
                     }
 
                     (_reload = function () {
+                        var queryId = avril.getHash({});
+                        _reload.id = queryId;
                         mvc.request.getViewData(url, function (resData) {
+                            if (_reload && queryId != _reload.id) {
+                                return false;
+                            }
                             var res = $.extend({}, resTmpl, resData);
                             models.model(mvc_page_model_key)(res);
                             func.apply(mvc, routeArgs);
