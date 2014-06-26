@@ -1,19 +1,101 @@
 /**
  * Created by trump.wang on 2014/6/26.
  */
-;(function(av,$, win){
+;(function($, win){
+
     avril.namespace('avril.mvvm');
 
     avril.createlib('avril.mvvm.TemplateParser',function(options){
-        var cfg = $.extend(this.options(),{
+        var cfg = $.extend(this.options(), {
                 /* default config */
+                commentPre: 'av'
+                , attrPre: 'av-'
+                , debug: true
             } , options)
-            , cache = {};
+            , self = this
+            , getCommentNodeValue = function (node) {
+                return node.nodeValue ? node.nodeValue.replace(/^\s*/g,'').replace(/\s*$/g,'') : '';
+            }
+            , isCommentTag = function(node) {
+                return getCommentNodeValue(node).indexOf(cfg.commentPre) === 0;
+            }
+            , isAvNode = function(node) {
+                if(node.nodeType == 8) {
+                    return isCommentTag(node);
+                } else {
+                    return avril.object.toArray(node.attributes).ex().first(function(attr){
+                        return attr.name.indexOf(cfg.attrPre) == 0;
+                    }) !== null;
+                }
+            }
+            , getNodeAvAttr = function(node){
+                if(isCommentTag(node)){
+                    var nodeValue = '{' + getCommentNodeValue(node).replace('av','') + '}'
+                    try{
+                        return eval('('+nodeValue+')');
+                    }catch (E){
+                        cfg.debug && ( avril.log('Error element:')
+                                || avril.log(node)
+                                || avril.log('compiled as:')
+                                || avril.log(nodeValue)
+                                || avril.log('Error info:')
+                                || avril.error(E.message)
+                                || avril.error(E.stack)
+                                || avril.log('\n'));
+
+                        return {};
+                    }
+                }else{
+                    var attrs = {};
+                    avril.array(node.attributes).where(function(attr){
+                        attrs[attr.name.replace(cfg.attrPre,'')] = attr.value;
+                    });
+                    return attrs;
+                }
+            }
+            , findCommentChildNodes = function(dom){
+                var childNodes = dom.childNodes , commentNodes = [];
+                for(var i=0;i<childNodes.length;i++){
+                    (childNodes[i].nodeType == 8) && commentNodes.push(childNodes[i]);
+                }
+                return commentNodes;
+            }
+            , searchNode = function(dom, controller){
+                dom.avController = controller;
+                avril.object( dom.childNodes ).toArray().ex().each(function(node,index){
+                    if(isAvNode(node)){
+                        var attrs = getNodeAvAttr(node);
+                        console.log(attrs);
+                        parse(node,attrs);
+                    }
+                    if(node.childNodes) {
+                        searchNode(node,controller);
+                    }
+                });
+            }
+            , parse = function(node){
+
+            };
 
         this.parse = function(dom,controller){
-            controller = controller || win;
-
-        }
+            searchNode(dom,controller);
+        };
     });
 
-})(avril,jQuery, window);
+    avril.mvvm.templateParser = avril.mvvm.TemplateParser();
+
+    avril.mvvm.parse = function (dom,controller){
+        if(dom.jquery){
+            dom.each(function(index,el){
+                avril.mvvm.templateParser.parse(el,controller);
+            });
+        }else if(typeof dom === 'string'){
+            avril.mvvm.parse($(dom),controller);
+        } else {
+            avril.mvvm.templateParser.parse(dom,controller);
+        }
+    };
+
+
+
+})(jQuery, window);
