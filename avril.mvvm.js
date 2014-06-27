@@ -23,9 +23,12 @@
                 if(node.nodeType == 8) {
                     return isCommentTag(node);
                 } else {
-                    return avril.object.toArray(node.attributes).ex().first(function(attr){
+                    var excludeTags = 'script'.toUpperCase().split(',').ex();
+
+                    return (excludeTags.indexOf(node.tagName) < 0 )
+                        && !!avril.object.toArray(node.attributes).ex().first(function(attr){
                         return attr.name.indexOf(cfg.attrPre) == 0;
-                    }) !== null;
+                    });
                 }
             }
             , getNodeAvAttr = function(node){
@@ -54,17 +57,18 @@
                 }
             }
             , searchNode = function(dom, controller){
+                var attrs = {};
                 dom.avController = controller;
-                avril.object( dom.childNodes ).toArray().ex().each(function(node,index){
-                    var attrs = {};
-                    isAvNode(node) && (attrs = getNodeAvAttr(node)) &&!attrs.stop && parse(node, attrs);
-                    if(!attrs.stop && node.childNodes) {
-                        searchNode(node,controller);
-                    }
+                isAvNode(dom) && (attrs = getNodeAvAttr(dom)) && !attrs.stop && parse(dom, attrs);
+                !attrs.stop &&avril.object( dom.childNodes ).toArray().ex().each(function(node,index){
+                    searchNode(node,controller);
                 });
             }
+            , applyBinding = function (node,attrs){
+
+            }
             , parse = function(node, attrs){
-                console.log(attrs);
+                console.log(arguments);
             };
 
         this.parse = function(dom,controller){
