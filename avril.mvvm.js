@@ -53,28 +53,18 @@
                     return attrs;
                 }
             }
-            , findCommentChildNodes = function(dom){
-                var childNodes = dom.childNodes , commentNodes = [];
-                for(var i=0;i<childNodes.length;i++){
-                    (childNodes[i].nodeType == 8) && commentNodes.push(childNodes[i]);
-                }
-                return commentNodes;
-            }
             , searchNode = function(dom, controller){
                 dom.avController = controller;
                 avril.object( dom.childNodes ).toArray().ex().each(function(node,index){
-                    if(isAvNode(node)){
-                        var attrs = getNodeAvAttr(node);
-                        console.log(attrs);
-                        parse(node,attrs);
-                    }
-                    if(node.childNodes) {
+                    var attrs = {};
+                    isAvNode(node) && (attrs = getNodeAvAttr(node)) &&!attrs.stop && parse(node, attrs);
+                    if(!attrs.stop && node.childNodes) {
                         searchNode(node,controller);
                     }
                 });
             }
-            , parse = function(node){
-
+            , parse = function(node, attrs){
+                console.log(attrs);
             };
 
         this.parse = function(dom,controller){
@@ -95,7 +85,5 @@
             avril.mvvm.templateParser.parse(dom,controller);
         }
     };
-
-
 
 })(jQuery, window);
