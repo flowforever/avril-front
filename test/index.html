@@ -1,0 +1,32 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>avril-front test</title>
+    <link rel="stylesheet" href="../ref/mocha/mocha.css" />
+</head>
+<body>
+    <div id="mocha"></div>
+    <script src="../ref/jquery-1.11.1.js"></script>
+    <script src="../ref/mocha/mocha.js"></script>
+    <script src="../ref/mocha/chai.js"></script>
+    <script>mocha.setup('bdd')</script>
+    <script>expect = chai.expect</script>
+    <!--test begin-->
+    <script src="../avril.js" ></script>
+    <script src="avril.js" ></script>
+
+    <script src="../avril.mvvm.js" ></script>
+    <script src="avril.mvvm.js" ></script>
+
+    <script src="../avril.tools.js" ></script>
+    <script src="avril.tools.js" ></script>
+    <!--test end-->
+
+
+    <script>
+        mocha.checkLeaks();
+        mocha.globals(['jQuery']);
+        mocha.run();
+    </script>
+</body>
+</html>

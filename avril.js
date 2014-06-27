@@ -521,6 +521,10 @@
                     return 'null';
                 }
 
+                if(typeof obj === 'string'){
+                    return obj;
+                }
+
                 var objType = typeof obj;
                 if(objType !== 'object'){
                     return objType;
