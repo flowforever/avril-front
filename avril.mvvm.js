@@ -59,7 +59,7 @@
             , searchNode = function(dom, controller){
                 var attrs = {};
                 dom.avController = controller;
-                isAvNode(dom) && (attrs = getNodeAvAttr(dom)) && !attrs.stop && parse(dom, attrs);
+                isAvNode(dom) && (attrs = getNodeAvAttr(dom)) && !attrs.stop && parseNode(dom, attrs);
                 !attrs.stop &&avril.object( dom.childNodes ).toArray().ex().each(function(node,index){
                     searchNode(node,controller);
                 });
@@ -67,9 +67,20 @@
             , applyBinding = function (node,attrs){
 
             }
-            , parse = function(node, attrs){
+            , parsedCache = function (){
+                
+
+            }()
+            , parseNode = function(node, attrs){
                 console.log(arguments);
-            };
+            }
+            , getComputedValue = function (model,expresion) {
+                
+            }
+            , subscribeModelChange = function (model,path , func) {
+                avril.event.get(path, model)(func);
+            }
+            , fireModelChange = function(model) {};
 
         this.parse = function(dom,controller){
             searchNode(dom,controller);
