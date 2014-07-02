@@ -67,24 +67,33 @@
             , applyBinding = function (node,attrs){
 
             }
-            , parsedCache = function (){
-
-
+            , isParsed = function (){
+                var cache = {};
+                return function(node){
+                    if(cache[ avril.getHash(node) ]){
+                        return true;
+                    }
+                    cache[  avril.getHash(node) ] = 1;
+                }
             }()
             , parseNode = function(node, attrs){
+                if(isParsed(node)){
+                    return false;
+                }
                 console.log(arguments);
-            }
-            , getComputedValue = function (model,expresion) {
-                
-            }
-            , subscribeModelChange = function (model,path , func) {
-                avril.event.get(path, model)(func);
-            }
-            , fireModelChange = function(model) {};
+            };
 
         this.parse = function(dom,controller){
             searchNode(dom,controller);
         };
+
+        this.parsers = {};
+        this.addParser = function (attrName,fn , overrided){
+            if( overrided || (!this.parsers[attrName]) ){
+                this.parsers[attrName] = fn;
+            }
+            return this;
+        }
     });
 
     avril.mvvm.templateParser = avril.mvvm.TemplateParser();
