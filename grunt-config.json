@@ -1,0 +1,9 @@
+{
+    "copy":{
+        "main": {
+            "files": [
+                { "expand": true, "src": ["release/*"], "dest": "copy", "filter": "isFile"}
+            ]
+        }
+    }
+}

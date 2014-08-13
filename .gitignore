@@ -1,1 +1,4 @@
-/.idea
+.idea
+release
+grunt-config.json
+node_modules
