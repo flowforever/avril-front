@@ -1,7 +1,7 @@
 /.idea
-node_module
+node_modules
 config.json
 bin
-node_modules
+avril-release
 copy
 config.json

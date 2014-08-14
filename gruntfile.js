@@ -59,11 +59,12 @@ module.exports = function(grunt){
             }
         }
         , copy: gruntConfig.copy
+        , clean:[
+            'avril-release'
+        ]
     });
 
-    grunt.event.on('watch', function(action, filepath, target) {
-        grunt.log.writeln(target + ': ' + filepath + ' has ' + action);
-    });
+    grunt.loadNpmTasks('grunt-contrib-clean');
 
     grunt.loadNpmTasks('grunt-contrib-concat');
 
@@ -73,6 +74,10 @@ module.exports = function(grunt){
 
     grunt.loadNpmTasks('grunt-contrib-watch');
 
-    grunt.registerTask('default' , ['concat', 'uglify', "copy", 'watch' ] );
+    grunt.event.on('watch', function(action, filepath, target) {
+        grunt.log.writeln(target + ': ' + filepath + ' has ' + action);
+    });
+
+    grunt.registerTask('default' , ['clean', 'concat', 'uglify', "copy", 'watch' ] );
 
 };
