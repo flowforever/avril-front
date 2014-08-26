@@ -141,7 +141,7 @@
                 dependences = dependences.trimAll().split(',');
             }
             var getEvent = avril.module.getModuleEvent
-            , waitModules = dependences.ex().where(function (ns) {
+            , waitModules = dependences.where(function (ns) {
                 return !avril.object(window).getVal(ns);
             })
             , executeCount = 0
@@ -172,7 +172,7 @@
             };
 
             if (waitModules.length > 0) {
-                waitModules.ex().each(function (ns) {
+                waitModules.each(function (ns) {
                     getEvent(ns)(function () {
                         execute(++executeCount);
                     });
@@ -610,7 +610,7 @@
 
                 var result = true;
 
-                this.eventList[name].ex().each(function (fnObj) {
+                this.eventList[name].each(function (fnObj) {
                     if (data && data.length >= 0) {
                         var args = [];
                         for (var i = 0; i < data.length; i++) {
@@ -722,7 +722,7 @@
 
         event.hook = function (obj, funNames, ns) {
             ns = ns || avril.getHash(obj);
-            funNames.split(',').ex().each(function (funName) {
+            funNames.split(',').each(function (funName) {
                 if (funName)
                     hook(obj, funName, ns);
             });
@@ -949,7 +949,7 @@
                         var _self = this;
                         if (typeof str == 'string') {
                             if (str.indexOf(',') >= 0) {
-                                str.split(',').ex().each(function (funName) {
+                                str.split(',').each(function (funName) {
                                     hook(_self, funName);
                                 });
                             } else {
@@ -1275,6 +1275,9 @@
 
             instance.select = function (func) {
                 func = parseFuncLambda(func);
+                if(this.map){
+                    return this.map(func);
+                }
                 var results = [];
                 this.each(function (value, index) {
                     results.push(func.call(value, value, index));
@@ -1353,14 +1356,7 @@
             return org;
         }
 
-        Array.prototype.ex = function() {
-            arrayEx(this);
-            return this;
-        }
-
-        avril.array = function(arr){
-            return avril.object.toArray(arr).ex();
-        };
+        arrayEx(Array.prototype);
 
     })();
     //#endregion
@@ -1371,7 +1367,7 @@
         window.console.log = function () { };
     }
 
-    'log,warn,error'.split(',').ex().each(function(action){
+    'log,warn,error'.split(',').each(function(action){
         avril[action] = function(msg){
             console[action] && console[action](msg);
         }
