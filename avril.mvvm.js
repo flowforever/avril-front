@@ -39,30 +39,57 @@
             , getWatchers = function(ns){
 
             }
+            , __unWatcherExps = [
+                'function'
+                , 'var'
+                , 'for'
+                , 'if'
+                , 'switch'
+                , 'case'
+            ]
+            , _expressionReg = /(\$scope|\$data|\$root|\$parent)(\.\S+|\[\S+\])*/g
+            , resolveExpressWatchers = function(){
+                var cache = {};
+                return function(expression){
+                    if(cache[expression]){
+                        return cache[expression];
+                    }
+                    var watchers = _expressionReg.exec(expression);
+                    return cache[expression] = watchers.where(function(w){
+                        return __unWatcherExps.indexOf(w) < 0;
+                    });
+                };
+            }
             , binderName = function(binderName){
                 return avril.Mvvm.defaults.attr_pre+'-'+binderName;
             }
             , resolveNs = function($el, ns){
-
-            }
-            , computePattern = {
-                '$av( expression, watch )': function() { }
             }
             , getScope = function(ns){
-                var scope = avril.object( _rootScopes).tryGetVal(ns) || {};
-
-                $.extend({
-                    $mvvm: self
-                    , $root: _rootScopes
-                }, scope);
+                var data = avril.object( _rootScopes).tryGetVal(ns) ;
+                return $.extend(true, {} , scope, {
+                    $root: _rootScopes
+                    , $data:data
+                });
 
             }
             , evalExpression = function(expression, $el , binderName){
-                var ns = self.getNs($el);
+                var ns = self.getNs($el)
+                    , watchers = resolveExpressWatchers(expression);
+
                 ns = resolveNs(ns);
 
-                with (getScope(ns)){
+                var $scope = getScope(ns);
+
+                with ($scope){
+                    var $data = $scope.data;
+
                     var $av = function(expression,dependencies){
+                        if(dependencies){
+                            $.each(dependencies.split(','), function(watcher){
+                               watchers.push(watcher);
+                            });
+                        }
                         if(typeof expression == 'function'){
                             return expression($el , binderName);
                         }
@@ -88,11 +115,23 @@
             bindlers[name] = binderFunc;
         };
 
-        this.bindDom = function(){
+        this.bindDom = function($el){
             innerHelper.globalEventBind.exec();
+            $el = $el? $($el) : $(document);
+            $el.find('[^'+avril.Mvvm.defaults.attr_pre+'-]').each(function(){
+                var $el = $(this);
+                if(!$el.data('av-binders')){
+                    var binders = getBinders($el);
+                    for(var k in binders){
+                        binders.init($el, binders[k]);
+                    }
+                }
+            });
         };
 
-        this.updateDom = function(){}
+        this.updateDom = function(){};
+
+        this.evalExpression = evalExpression;
 
         this.setVal = function(ns, value) {
             avril.object(_rootScope).setVal(ns, value);
