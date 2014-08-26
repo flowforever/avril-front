@@ -6,26 +6,21 @@
 
     };
 
-    avril.createlibOn(innerHelper,'OneTimeEvent',function(){
-        this._inited = false;
-        this.init = function(func){
-            this.func = func;
-            return this;
+    var bindGlobal = function(){
+        var binded = false;
+        return function(){
+            if(binded ){
+                return true;
+            }
+            binded = true;
+            var attrPre = avril.Mvvm.defaults.attr_pre;
+            $( avril.mvvm.selector ).on(avril.Mvvm.defaults.trigger_events,function(){
+                var $el = $(this)
+                    , ns = mvvm.getNs($el);
+                mvvm.setVal(ns, $el.val());
+            });
         }
-        this.exec = function(){
-            !this._inited && this.func && this.func();
-        }
-    });
-
-    innerHelper.globalEventBind = innerHelper.OneTimeEvent().init(function(){
-        var attrPre = avril.Mvvm.defaults.attr_pre;
-        $('[^'+attrPre+'-]').live(avril.Mvvm.defaults.trigger_events,function(){
-
-            var $el = this
-                , ns = mvvm.getNs($el);
-            mvvm.setVal(ns, $el.val());
-        });
-    });
+    }();
 
     avril.createlib('avril.Mvvm', function(options){
 
@@ -33,7 +28,19 @@
             , self = this
             , bindlers = {}
             , getBinders = function($el){
-
+                var binder = $el.data('av-binders');
+                if(binder){
+                    return binder;
+                }
+                binder = {};
+                self.selector.split(',').ex().each(function(selector){
+                    if( $el.is(selector)){
+                        var binderName = selector.replace(/\[|\]/g,'').replace(avril.Mvvm.defaults.attr_pre+'-','');
+                        binder[binderName] = bindlers[binderName];
+                    }
+                });
+                $el.data('av-binders', binder);
+                return binder;
             }
             ,  _rootScopes = {}
             , getWatchers = function(ns){
@@ -67,7 +74,7 @@
             }
             , getScope = function(ns){
                 var data = avril.object( _rootScopes).tryGetVal(ns) ;
-                return $.extend(true, {} , scope, {
+                return $.extend(true, {} , {
                     $root: _rootScopes
                     , $data:data
                 });
@@ -82,6 +89,7 @@
                 var $scope = getScope(ns);
 
                 with ($scope){
+
                     var $data = $scope.data;
 
                     var $av = function(expression,dependencies){
@@ -100,9 +108,54 @@
                         expression = '$av('+expression+')';
                     }
 
-                    var value = eval( expression );
+                    try
+                    {
+                        var value = eval( expression );
 
-                    return value;
+                        return value;
+
+                    } catch (E){
+                        if(avril.Mvvm.defaults.dev === true){
+                            throw E;
+                        }
+                        if(avril.Mvvm.defaults.errorHandler){
+                            avril.Mvvm.defaults.errorHandler(E);
+                        }
+                    }
+
+                    return '';
+                }
+            }
+            , valueAccessorFunc = function($el,k){
+                var func = function(){
+                    return evalExpression( $el.attr(binderName(k)) , $el , k );
+                };
+
+                func.expression = $el.attr(binderName(k));
+
+                return func;
+            }
+            , selector = function(){
+                return avril.object(bindlers).keys().ex().select(function(key){
+                    return '['+avril.Mvvm.defaults.attr_pre+'-'+key+']'
+                }).join(',');
+            }
+            , initElement = function(el){
+                var $el = $(el);
+                if($el.data('av-inited')){
+                    return true;
+                }
+                $el.data('av-inited', true);
+                var binders = getBinders($el);
+                for(var k in binders){
+                    binders[k].init($el, valueAccessorFunc($el,k), self );
+                }
+            }
+            , updateElement = function(){
+                var $el = $(el);
+                var binders = getBinders($el);
+                for(var k in binders){
+                    binders[k].update($el, valueAccessorFunc($el,k), self );
                 }
             }
             ;
@@ -111,25 +164,41 @@
             return this;
         };
 
-        this.addBinder = function(name,binderFunc){
-            bindlers[name] = binderFunc;
+        this.selector = selector();
+
+        this.addBinder = function(name,binder){
+            if(typeof binder == 'function'){
+                binder = {
+                    init:binder
+                }
+            }
+            if(!binder.update){
+                binder.update = binder.init;
+            }
+            bindlers[name] = {
+                init: function(){
+                    binder && binder.init && binder.init.apply(binder, arguments);
+                }
+                , update: function(){
+                    binder && binder.update && binder.update.apply(binder, arguments);
+                }
+            };
+            this.selector = selector();
         };
 
         this.bindDom = function($el){
-            innerHelper.globalEventBind.exec();
+            bindGlobal();
             $el = $el? $($el) : $(document);
-            $el.find('[^'+avril.Mvvm.defaults.attr_pre+'-]').each(function(){
-                var $el = $(this);
-                if(!$el.data('av-binders')){
-                    var binders = getBinders($el);
-                    for(var k in binders){
-                        binders.init($el, binders[k]);
-                    }
-                }
+            $el.find(self.selector).each(function(){
+                initElement(this);
             });
         };
 
-        this.updateDom = function(){};
+        this.updateDom = function($el){
+            $($el).find(self.selector).each(function(){
+                updateElement(this);
+            });
+        };
 
         this.evalExpression = evalExpression;
 
@@ -141,9 +210,7 @@
             avril.event.get(ns,this)(func);
         };
 
-        this.getBindingOptions = function($el){
-
-        }
+        this.getBindingOptions = getBinders;
 
         this.getNs = function($el){
             var ns = ''
@@ -160,128 +227,29 @@
             return resolveNs(this.getNs());
         }
 
-        var addBinder = this.addBinder.bind(this)
-            , getBindingOptions = this.getBindingOptions.bind(this);
+        var addBinder = this.addBinder.bind(this);
 
-        addBinder('ns', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
+        addBinder('ns', function($el,value,mvvm){
+            var ns = '$root';
         });
 
-        addBinder('stop', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
+        addBinder('data',function($el,value,mvvm){
+            var val = value();
+            if($el.is('input')){
+                if($el.is(':checkbox') || $el.is(':radio')){
+                    $el.attr('checked' , $el.val() === val );
+                }else{
+                    $el.val(val);
+                }
+            } else if($el.is('textarea') || $el.is('select')){
+                $el.val( val );
+            } else {
+                $el.attr(binderName('html')) ? $el.html(val) : $el.text( val );
+            }
         });
 
-        addBinder('html', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('data', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('html', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('if', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('each', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('css', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('attrs', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('styles', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
-        });
-
-        addBinder('template', function(mvvm, onInit, onChange){
-
-            onInit(function($el, binderVal){
-
-            });
-
-            onChange(function($el, binderVal){
-
-            });
+        addBinder('html', function($el, value,mvvm){
+            bindlers.data.init.apply(bindlers.data, arguments);
         });
 
     });

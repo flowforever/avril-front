@@ -1,5 +1,4 @@
 ﻿; (function (window) {
-console.log('helo');
     if (window.avril && avril.avril) {
         return avril;
     }

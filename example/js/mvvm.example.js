@@ -3,6 +3,7 @@
  */
 (function(){
     $(function(){
-        avril.mvvm.parse('.demo');
+        //avril.Mvvm.defaults.dev = true;
+        avril.mvvm.bindDom(document);
     });
 })();
