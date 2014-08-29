@@ -2,36 +2,11 @@
  * Created by trump.wang on 2014/6/26.
  */
 ;(function($, win){
-    var innerHelper = {
-
-    };
-
-    var bindGlobal = function(){
-        var binded = false;
-        return function(){
-            if(binded ){
-                return true;
-            }
-            binded = true;
-            var attrPre = avril.Mvvm.defaults.attr_pre;
-            var mvvm = avril.mvvm;
-            $(avril.mvvm.selector).on(avril.Mvvm.defaults.trigger_events,function(){
-                var $el = $(this);
-                if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
-                    var ns = mvvm.getNs($el)
-                        , absPath = mvvm.getAbsNs($el);
-                    mvvm.setVal(absPath, $el.val(), $el);
-                }
-            });
-            $('html').attr(attrPre+'-scope','$root');
-        }
-    }();
-
-    avril.createlib('avril.Mvvm', function(options){
+    var Mvvm = avril.createlib('avril.Mvvm', function(options){
 
         var config = $.extend(this.options(), options, {})
             , self = this
-            , bindlers = {}
+            , binders = {}
             , getBinders = function($el){
                 var binder = $el.data('av-binders');
                 if(binder){
@@ -40,8 +15,8 @@
                 binder = {};
                 self.selector.split(',').each(function(selector){
                     if( $el.is(selector)){
-                        var binderName = selector.replace(/\[|\]/g,'').replace(avril.Mvvm.defaults.attr_pre+'-','');
-                        binder[binderName] = bindlers[binderName];
+                        var binderName = selector.replace(/\[|\]/g,'').replace(Mvvm.defaults.attr_pre+'-','');
+                        binder[binderName] = binders[binderName];
                     }
                 });
                 $el.data('av-binders', binder);
@@ -53,11 +28,11 @@
             , resolveExpressWatchers = function(){
                 var cache = {};
                 return function(expression){
+                    expression = expression.replace(/^\s+|\s+$/g,'');
                     if(cache[expression]){
                         return cache[expression];
                     }
                     var watchers = [] , watcher;
-
                     while(watcher = _expressionReg.exec(expression) ){
                         watchers.push(watcher[0]);
                     }
@@ -66,17 +41,17 @@
                 };
             }()
             , binderName = function(binderName){
-                return avril.Mvvm.defaults.attr_pre+'-'+binderName;
+                return Mvvm.defaults.attr_pre+'-'+binderName;
             }
             , getScope = function(ns){
-                var data = avril.object( _rootScopes).tryGetVal(ns) ;
+                var data = avril.object( _rootScopes).tryGetVal(ns);
                 return $.extend(true, {} , {
                     $root: _rootScopes
-                    , $data:data
+                    , $data: data || ''
+                    , $scope: data || {}
                 });
-
             }
-            , evalExpression = function(expression, $el , binderName){
+            , evalExpression = function(expression, $el){
                 if(_simpleExpressionReg.test(expression) && !/^\d+/.test(expression)){
                     expression = '$scope.'+expression ;
                 }
@@ -87,58 +62,25 @@
                 var ns = self.getNs($el)
                     , watchers = resolveExpressWatchers(expression);
 
-                var $scope = getScope(ns);
-
-                with ($scope){
-
-                    var $data = $scope.data , evalValue;
-
-                    var $av = function(expression,dependencies){
-                        if(dependencies){
-                            $.each(dependencies.split(','), function(watcher){
-                               watchers.push(watcher);
-                            });
+                watchers.each(function(watchPath){
+                    var absNs = resolveAbsNs(ns, watchPath);
+                    self.subscribe(absNs, function(newValue,oldValue,$sourceElement){
+                        if(!Mvvm.elementExists($el)){
+                            return 'removeThis';
                         }
-                        if(typeof expression == 'function'){
-                            return expression($el);
-                        }
-                        return expression || '';
-                    };
-
-                    if(expression && expression.indexOf('$av') < 0){
-                        expression = '$av('+expression+')';
-                    }
-                    
-                    try
-                    {
-                        evalValue = eval( expression );
-                        return value;
-                    } catch (E){
-                        if(avril.Mvvm.defaults.dev === true){
-                            throw E;
-                        }
-                        if(avril.Mvvm.defaults.errorHandler){
-                            avril.Mvvm.defaults.errorHandler(E);
-                        }
-                        avril.Mvvm.defaults.show_full_ns && (function(){
-                            $el.attr('av-error-dev', E.message);
-                        })();
-                    }
-
-                    watchers.each(function(w){
-                        var absNs = resolveAbsNs(ns, w);
-                        self.subscribe(absNs, function(newValue,oldValue,$sourceElement){
-                            if($el.length==0){
-                                return 'removeThis';
-                            }
-                            if($sourceElement[0] != $el[0]){
+                        if($sourceElement[0] != $el[0]){
+                            if(watchers.length == 1){
                                 updateElement($el , newValue );
+                            } else {
+                                updateElement($el, Mvvm.evalExpression(expression,getScope(ns)));
                             }
-                        });
+                        }
                     });
+                });
 
-                    return evalValue || '';
-                }
+                Mvvm.devInfo($el,'dependency',watchers.join(','));
+
+                return Mvvm.evalExpression(expression,getScope(ns));
             }
             , valueAccessorFunc = function($el,k){
 
@@ -151,8 +93,8 @@
                 return func;
             }
             , selector = function(){
-                return avril.object(bindlers).keys().select(function(key){
-                    return '['+avril.Mvvm.defaults.attr_pre+'-'+key+']'
+                return avril.object(binders).keys().select(function(key){
+                    return '['+Mvvm.defaults.attr_pre+'-'+key+']'
                 }).join(',');
             }
             , initElement = function(el){
@@ -173,11 +115,26 @@
                     binders[k].update($el, function(){ return newValue; }, self );
                 }
             }
-            ;
-
-        this.init = function(){
-            return this;
-        };
+            , bindGlobal = function(){
+                var binded = false;
+                return function(){
+                    if(binded ){
+                        return true;
+                    }
+                    binded = true;
+                    var attrPre = Mvvm.defaults.attr_pre;
+                    var mvvm = avril.mvvm;
+                    $(avril.mvvm.selector).on(Mvvm.defaults.trigger_events,function(){
+                        var $el = $(this);
+                        if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
+                            var ns = mvvm.getNs($el)
+                                , absPath = mvvm.getAbsNs($el);
+                            mvvm.setVal(absPath, $el.val(), $el);
+                        }
+                    });
+                    $('html').attr(attrPre+'-scope','$root');
+                }
+            }();
 
         this.selector = selector();
 
@@ -190,8 +147,8 @@
             if(!binder.update){
                 binder.update = binder.init;
             }
-            bindlers[name] = {
-                init: function(){
+            binders[name] = {
+                init: function($el){
                     binder && binder.init && binder.init.apply(binder, arguments);
                 }
                 , update: function(){
@@ -218,20 +175,26 @@
         this.setVal = function(ns, value , $sourceElement) {
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
             if(oldValue!=value){
+                if(value){
+                    if(!isNaN(value)){
+                        value = Number(value);
+                    }
+                }
                 avril.object(_rootScopes).setVal(ns, value);
                 getEvent(ns)([ value, oldValue, $sourceElement ]);
             }
         };
 
         this.subscribe = function(ns, func){
+
             getEvent(ns)(func);
         };
 
-        this.getBindingOptions = getBinders;
+        this.getBinders = getBinders;
 
         this.getNs = function($el){
             var ns = ''
-                , nsBinderName = binderName('scope')
+                , nsBinderName = Mvvm.bindingName('scope')
                 , $parents = $el.parents();
 
             if($el.attr(nsBinderName )){
@@ -254,8 +217,7 @@
 
             ns = ns.replace(/\.$/g,'');
 
-
-            avril.Mvvm.defaults.show_full_ns && $el.attr(nsBinderName+'-dev',ns);
+            Mvvm.devInfo($el,'scope',ns);
 
             return ns;
         };
@@ -283,15 +245,15 @@
 
         var addBinder = this.addBinder.bind(this);
 
-        addBinder('stop', function($el,value,mvvm){
+        addBinder('stop', function($el,value){
             var val = value();
         });
 
-        addBinder('scope', function($el,value,mvvm){
+        addBinder('scope', function($el,value){
             var ns = '$root';
         });
 
-        addBinder('data',function($el,value,mvvm){
+        addBinder('data',function($el,value){
             var val = value();
             if($el.is('input')){
                 if($el.is(':checkbox') || $el.is(':radio')){
@@ -306,26 +268,77 @@
             }
         });
 
-        addBinder('exec', function($el,value,mvvm){
+        addBinder('exec', function($el,value){
             value();
         });
 
-        addBinder('execScript', function($el,value,mvvm){
+        addBinder('execScript', function($el,value){
             var expression = $el.html();
         });
 
-        addBinder('html', function($el, value,mvvm){
-            bindlers.data.init.apply(bindlers.data, arguments);
+        addBinder('html', function($el, value){
+            binders.data.init.apply(binders.data, arguments);
         });
+
+        addBinder('each', {
+            init: function($el,value){
+                avril.data($el, $el.html());
+                this.update($el,value);
+            }
+            ,update: function($el,value){
+                var html = avril.data($el);
+
+            }
+        });
+
+        addBinder('if',{
+            init:function($el,value){
+                avril.data($el, $el.html());
+            }
+            , update: function($el,value){
+
+            }
+        })
 
     });
 
-    avril.Mvvm.defaults = {
+    Mvvm.defaults = {
         attr_pre: 'av'
         , trigger_events: 'change keyup'
-        , show_full_ns : true
+        , show_dev_info : true
     };
 
-    avril.mvvm = avril.Mvvm();
+    Mvvm.bindingName = function(name){
+        return this.defaults.attr_pre+'-'+name;
+    };
 
+    Mvvm.devInfo = function ($el, name,info) {
+        this.defaults.show_dev_info && $el.attr( this.bindingName(name)+'-dev', info );
+    };
+
+    Mvvm.elementExists = function($el){
+        return $el.parents('html').length > 0 || $el.is('html');
+    };
+
+    var evalExpression = function(expression, $scope){
+        with ($scope){
+            try
+            {
+                return eval( expression );
+            } catch (E){
+                if(avril.Mvvm.defaults.dev === true){
+                    throw E;
+                }
+                if(avril.Mvvm.defaults.errorHandler){
+                    avril.Mvvm.defaults.errorHandler(E);
+                }
+            }
+        }
+
+        return '';
+    };
+
+    Mvvm.evalExpression = evalExpression;
+
+    avril.mvvm = avril.Mvvm();
 })(jQuery, window);

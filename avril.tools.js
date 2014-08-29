@@ -309,4 +309,46 @@
     })();
     //#endregion
 
+
+    //avril.tools.queue
+    avril.tools.queue = (function(){
+        var queues = {};
+        function Queue(name){
+            this.name = name;
+            var queue = [];
+            var pickNext = function(){
+                var task = queue[0];
+                if(task ){
+                    var fn =task.fn;
+                    if(!task.status){
+                        task.status = 'doing';
+                        fn( function(){
+                            task.status = 'done';
+                            queue.shift();
+                            pickNext();
+                        });
+                    }
+                }
+            };
+            this.func = function(fn){
+                queue.push({fn: wrapFn(fn) } );
+                pickNext();
+            };
+            var wrapFn = function(fn){
+                if(fn.length >0){
+                    return fn;
+                }
+                return function(cb){
+                    fn();
+                    cb();
+                }
+            }
+        }
+
+        return function(name){
+            name = name || new Date().getTime();
+            return queues[name] || (queues[name] = new Queue(name));
+        };
+
+    })();
 })($, avril);

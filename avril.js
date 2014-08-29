@@ -1,4 +1,213 @@
-﻿; (function (window) {
+﻿//#region avril.array
+;(function(){
+    function arrayEx(org) {
+
+        var instance = {};
+
+        function isFunc(func) {
+            return typeof func == 'function';
+        }
+
+        function parseFuncLambda(func) {
+            return isFunc(func) ?
+                func :
+                (isLambda(func) ? func.lambda() : function () {
+
+                });
+        }
+
+        function sort(instance, field, dirc) {
+            dirc = dirc || 1;
+            return instance.sort(function (x, y) {
+                if (field) {
+                    if (x[field] > y[field]) {
+                        return dirc;
+                    } else {
+                        return -1 * dirc;
+                    }
+                } else {
+                    if (x > y) {
+                        return dirc;
+                    } else {
+                        return -1 * dirc;
+                    }
+                }
+            });
+        }
+
+        instance.asc = function (field) {
+            return sort(this, field, 1);
+        }
+
+        instance.desc = function (field) {
+            return sort(this, field, -1);
+        }
+
+        instance.each = function (func) {
+            func = parseFuncLambda(func);
+            for (var i = 0; i < this.length; i++) {
+                if (func(this[i], i) == false) {
+                    break;
+                }
+            }
+            return this;
+        }
+
+        instance.where = function (func) {
+            func = parseFuncLambda(func);
+            var results = [];
+            this.each(function (value, index) {
+                if (func(value, index) == true) {
+                    results.push(value);
+                }
+            });
+            return results;
+        }
+
+        instance.first = function (func) {
+            func = parseFuncLambda(func);
+            if (this.length == 0) {
+                return null;
+            }
+            if (func) {
+                return this.where(func)[0];
+            } else {
+                return this[0];
+            }
+        }
+
+        instance.last = function (func) {
+            func = parseFuncLambda(func);
+            if (this.length == 0) {
+                return null;
+            }
+            if (isFunc(func)) {
+                return this.where(func).last();
+            } else {
+                return this[this.length - 1];
+            }
+        }
+
+        instance.groupBy = function (func) {
+            func = parseFuncLambda(func);
+            if (func) {
+                var obj = {};
+                this.each(function (item, index) {
+                    var key = func(item, index) + '';
+                    if (!obj[key]) {
+                        obj[key] = [];
+                    }
+                    obj[key].push(item);
+                });
+                return obj;
+            }
+            return this;
+        }
+
+        instance.take = function (num) {
+            var result = [];
+            for (var i = 0; i < num; i++) {
+                result.push(this[i]);
+            }
+            return result;
+        }
+
+        instance.skip = function (num) {
+            var result = [];
+            for (var i = num; i < this.length; i++) {
+                result.push(this[i]);
+            }
+            return result;
+        }
+
+        instance.select = function (func) {
+            func = parseFuncLambda(func);
+            if(this.map){
+                return this.map(func);
+            }
+            var results = [];
+            this.each(function (value, index) {
+                results.push(func.call(value, value, index));
+            });
+            return results;
+        }
+
+        instance.remove = function (func) {
+            func = parseFuncLambda(func);
+            var toRemove = [];
+            this.each(function (val, index) {
+                if (func(val, index)) { toRemove.push(index); }
+            });
+            var arr = this;
+            toRemove.reverse().each(function (val) { arr.splice(val, 1) });
+            return arr;
+        }
+
+        instance.removeElement = function (elment) {
+            return this.remove(function (value, index) { return value == elment; });
+        }
+
+        instance.removeAt = function (index) {
+            return this.remove(function (value, index) { return index == index; });
+        }
+
+        instance.indexOf = function (element) {
+            var i = -1;
+            this.each(function (value, index) {
+                if (value == element) {
+                    i = index;
+                    return false;
+                }
+            });
+
+            return i;
+        }
+
+        instance.contain = function (element, elementIsFunction) {
+            if (true != elementIsFunction && typeof element == 'function') {
+                return this.where(element).length > 0;
+            }
+            return this.indexOf(element) >= 0;
+        }
+
+        var isFunc = function (obj) {
+            return typeof obj == 'function';
+        }
+
+        instance.distinc = function (compareFunc) {
+            var arr = [];
+            this.each(function (value, index) {
+                if (isFunc(compareFunc)
+                    && compareFunc(value, index) != false) {
+                    arr.push(value);
+                } else if (!isFunc(compareFunc)
+                    && !arr.contain(value)) {
+                    arr.push(value);
+                }
+            });
+            return arr;
+        }
+
+        instance.clone = function () {
+            var arr = [];
+            for (var i = 0; i < this.length; i++) {
+                arr.push(this[i]);
+            }
+            return arr;
+        }
+
+        for (var k in instance) {
+            org[k] = org[k] || instance[k];
+        }
+
+        return org;
+    }
+
+    arrayEx(Array.prototype);
+
+})();
+//#endregion
+; (function (window) {
     if (window.avril && avril.avril) {
         return avril;
     }
@@ -602,6 +811,8 @@
                 this.eventList[name].push(eve);
             },
             execute: function (name, context, data) {
+                var self = this;
+
                 name = name || 'default';
 
                 this.eventList[name] = this.eventList[name] || [];
@@ -610,7 +821,10 @@
 
                 var result = true;
 
+                var toRemove = [];
+
                 this.eventList[name].each(function (fnObj) {
+                    var execResult ;
                     if (data && data.length >= 0) {
                         var args = [];
                         for (var i = 0; i < data.length; i++) {
@@ -619,10 +833,17 @@
                         if (fnObj.data) {
                             args.push(fnObj.data);
                         }
-                        result = result && (!(fnObj.func.apply(context, args) == false));
+                        result = result && (!( (execResult = fnObj.func.apply(context, args)) == false));
                     } else {
-                        result = result && (!(fnObj.func.call(context, data, fnObj.data) == false));
+                        result = result && (!( (execResult = fnObj.func.call(context, data, fnObj.data) ) == false));
                     }
+                    if(execResult === 'removeThis'){
+                        toRemove.push(fnObj);
+                    }
+                });
+
+                toRemove.each(function(fnObj){
+                    self.eventList[name].removeElement(fnObj);
                 });
 
                 return result;
@@ -994,8 +1215,6 @@
 
             var type = avril.object(obj).getVal(namespace);
 
-            var _instance;
-
             $.extend(type, statics);
 
             var __toString = type.toString;
@@ -1054,7 +1273,7 @@
                 }
             }
 
-            fnName = namespace.replace(new RegExp('\\.', 'gi'), '_');
+            var fnName = namespace.replace(new RegExp('\\.', 'gi'), '_');
 
             if (!$.fn[fnName]) {
                 $.fn[fnName] = function (options) {
@@ -1151,215 +1370,6 @@
     //#endregion
 
 
-    //#region avril.array
-    (function(){
-        function arrayEx(org) {
-
-            var instance = {};
-
-            function isFunc(func) {
-                return typeof func == 'function';
-            }
-
-            function parseFuncLambda(func) {
-                return isFunc(func) ?
-                    func :
-                    (isLambda(func) ? func.lambda() : function () {
-
-                    });
-            }
-
-            function sort(instance, field, dirc) {
-                dirc = dirc || 1;
-                return instance.sort(function (x, y) {
-                    if (field) {
-                        if (x[field] > y[field]) {
-                            return dirc;
-                        } else {
-                            return -1 * dirc;
-                        }
-                    } else {
-                        if (x > y) {
-                            return dirc;
-                        } else {
-                            return -1 * dirc;
-                        }
-                    }
-                });
-            }
-
-            instance.asc = function (field) {
-                return sort(this, field, 1);
-            }
-
-            instance.desc = function (field) {
-                return sort(this, field, -1);
-            }
-
-            instance.each = function (func) {
-                func = parseFuncLambda(func);
-                for (var i = 0; i < this.length; i++) {
-                    if (func(this[i], i) == false) {
-                        break;
-                    }
-                }
-                return this;
-            }
-
-            instance.where = function (func) {
-                func = parseFuncLambda(func);
-                var results = [];
-                this.each(function (value, index) {
-                    if (func(value, index) == true) {
-                        results.push(value);
-                    }
-                });
-                return results;
-            }
-
-            instance.first = function (func) {
-                func = parseFuncLambda(func);
-                if (this.length == 0) {
-                    return null;
-                }
-                if (func) {
-                    return this.where(func)[0];
-                } else {
-                    return this[0];
-                }
-            }
-
-            instance.last = function (func) {
-                func = parseFuncLambda(func);
-                if (this.length == 0) {
-                    return null;
-                }
-                if (isFunc(func)) {
-                    return this.where(func).last();
-                } else {
-                    return this[this.length - 1];
-                }
-            }
-
-            instance.groupBy = function (func) {
-                func = parseFuncLambda(func);
-                if (func) {
-                    var obj = {};
-                    this.each(function (item, index) {
-                        var key = func(item, index) + '';
-                        if (!obj[key]) {
-                            obj[key] = [];
-                        }
-                        obj[key].push(item);
-                    });
-                    return obj;
-                }
-                return this;
-            }
-
-            instance.take = function (num) {
-                var result = [];
-                for (var i = 0; i < num; i++) {
-                    result.push(this[i]);
-                }
-                return result;
-            }
-
-            instance.skip = function (num) {
-                var result = [];
-                for (var i = num; i < this.length; i++) {
-                    result.push(this[i]);
-                }
-                return result;
-            }
-
-            instance.select = function (func) {
-                func = parseFuncLambda(func);
-                if(this.map){
-                    return this.map(func);
-                }
-                var results = [];
-                this.each(function (value, index) {
-                    results.push(func.call(value, value, index));
-                });
-                return results;
-            }
-
-            instance.remove = function (func) {
-                func = parseFuncLambda(func);
-                var toRemove = [];
-                this.each(function (val, index) {
-                    if (func(val, index)) { toRemove.push(index); }
-                });
-                var arr = this;
-                toRemove.reverse().each(function (val) { arr.splice(val, 1) });
-                return arr;
-            }
-
-            instance.removeElement = function (elment) {
-                return this.remove(function (value, index) { return value == elment; });
-            }
-
-            instance.removeAt = function (index) {
-                return this.remove(function (value, index) { return index == index; });
-            }
-
-            instance.indexOf = function (element) {
-                var i = -1;
-                this.each(function (value, index) {
-                    if (value == element) {
-                        i = index;
-                        return false;
-                    }
-                });
-
-                return i;
-            }
-
-            instance.contain = function (element, elementIsFunction) {
-                if (true != elementIsFunction && typeof element == 'function') {
-                    return this.where(element).length > 0;
-                }
-                return this.indexOf(element) >= 0;
-            }
-
-            var isFunc = function (obj) {
-                return typeof obj == 'function';
-            }
-
-            instance.distinc = function (compareFunc) {
-                var arr = [];
-                this.each(function (value, index) {
-                    if (isFunc(compareFunc)
-                        && compareFunc(value, index) != false) {
-                        arr.push(value);
-                    } else if (!isFunc(compareFunc)
-                        && !arr.contain(value)) {
-                        arr.push(value);
-                    }
-                });
-                return arr;
-            }
-
-            instance.clone = function () {
-                var arr = [];
-                for (var i = 0; i < this.length; i++) {
-                    arr.push(this[i]);
-                }
-                return arr;
-            }
-
-            for (var k in instance) {
-                org[k] = org[k] || instance[k];
-            }
-
-            return org;
-        }
-
-        arrayEx(Array.prototype);
-
-    })();
-    //#endregion
 
     //
     if (!window.console) {

@@ -3,9 +3,7 @@
 <head >
     <title >avril-front js frame work</title >
     <script src="../ref/jquery-1.11.1.js"></script>
-    <script src="../avril.js"></script>
-    <script src="../avril.tools.js"></script>
-    <script src="../avril.mvvm.js"></script>
+    <script src="../release/avril.all.latest.min.js"></script>
     <script src="js/mvvm.example.js"></script>
 </head >
 <body >
@@ -36,27 +34,5 @@
         </script>
     </div>
     <input av-data="$root.model.obj.key1" />
-    <div av-scope="other">
-        <form av-scope="form">
-            <input av-data="name"/>
-            <input av-data="email"/>
-        </form>
-        <div av-scope="$root.model">
-            <span av-data="obj.key1"></span>
-        </div>
-    </div>
-    <ul av-each="array,$item,$index">
-        <li>
-            <span av-data=""></span>
-            <span av-data="$item.text"></span>
-        </li>
-    </ul>
-
-    <div av-scope="calculate">
-        <input name="val0" value="2" av-data="val0">
-        <input name="val1" value="1" av-data="val1">
-
-        <input av-data="$scope.val0 + $scope.val1">
-    </div>
 </body >
 </html >
