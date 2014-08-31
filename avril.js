@@ -1,5 +1,133 @@
 ﻿//#region avril.array
 ;(function(){
+
+    String.prototype.toUnicode = function () {
+        return escape(this).replace(/\%/g, '\\');
+    }
+
+    String.prototype.endWidth = function (str, ignoreCase) {
+        if (ignoreCase) {
+            var source = this.toLower();
+            var target = str.toLower();
+            return source.indexOf(target, source.length - target.length) !== -1;
+        }
+        return this.indexOf(str, this.length - str.length) !== -1;
+    }
+
+    String.prototype.beginWidth = function (str, ignoreCase) {
+        if (ignoreCase) {
+            var source = this.toLower();
+            var target = str.toLower();
+            return source.indexOf(target) == 0;
+        }
+        return this.indexOf(str) == 0;
+    }
+
+    String.prototype.replaceAll = function (word, replacement) {
+        var reg = new RegExp(word, 'gi');
+        return this.replace(reg, replacement);
+    }
+
+    String.prototype.equals = function (target, ignoreCase) {
+        if (ignoreCase == undefined) { ignoreCase = true; }
+        if (target != undefined && target != null) {
+            return this == target || this.toLower() == target.toLower();
+        }
+        return this == target;
+    }
+
+    String.prototype.trim = function () {
+        var reg = /(^\s*)|(\s*$)/g;
+        return this.replace(reg, "");
+    }
+
+    String.prototype.trimAll = function () {
+        var reg = /\s*/g;
+        return this.replace(reg, '');
+    }
+
+    String.prototype.uperChar0 = function () {
+        var name = this;
+        var char0 = name.charAt(0);
+        var r = char0.toUpperCase();
+        return name.replace(new RegExp('^' + char0), r);
+    }
+
+    String.prototype.lowerChar0 = function () {
+        var name = this;
+        var char0 = name.charAt(0);
+        var r = char0.toLowerCase();
+        return name.replace(new RegExp('^' + char0), r);
+    }
+
+    String.prototype.toLower = String.prototype.toLowerCase;
+
+    String.prototype.toUpper = String.prototype.toUpperCase;
+
+    String.prototype.ellipsis = function (length, ellipsisLength) {
+        var str = this.toString();
+        if (str.length <= length)
+            return str;
+
+        ellipsisLength = ellipsisLength || 3;
+        var ret = str.substr(0, length - ellipsisLength);
+        for (var i = 0; i < ellipsisLength; i++) {
+            ret = ret + ".";
+        }
+        return ret;
+    }
+
+    function isLambda(str) {
+        return str && typeof (str) == 'string' && str.indexOf('=>') > 0;
+    }
+
+    String.prototype.lambda = function (ctx) {
+        var str = this;
+        if (isLambda(str)) {
+            var lambdaKey = str.indexOf('=>')
+                , args = str.substring(0, lambdaKey)
+                , funcContent = str.substring(lambdaKey + 2)
+                , funcStr = 'function';
+            if (args.indexOf('(') < 0) {
+                funcStr += ' (' + args + ')';
+            } else {
+                funcStr += args;
+            }
+
+            if (funcContent.indexOf('{') >= 0) {
+                if (funcContent.indexOf(';') >= 0) {
+                    funcStr += funcContent;
+                } else {
+                    funcStr += '{ return ' + funcContent + '; }';
+                }
+            } else {
+                funcStr += '{ return ' + funcContent + '; }'
+            }
+
+            if (ctx) {
+                with (ctx) {
+                    return eval('(' + funcStr + ')');
+                }
+            }
+
+            return eval('(' + funcStr + ')');
+
+            /*
+             {
+             return o.b;
+             }
+
+             o.b
+
+             { a:o.b }
+
+             {
+
+             }
+             */
+        }
+    }
+
     function arrayEx(org) {
 
         var instance = {};
@@ -704,7 +832,7 @@
         }
 
         avril.guid = function () {
-            return (new Date().getTime()) + '_' + Math.random().toString().replace('.', '_');
+            return  Math.random().toString().replace('.', '_') + '_' +  (new Date().getTime());
         }
 
         avril.alert = function (msg) {
@@ -796,18 +924,16 @@
 
         event._event = {
             eventList: {},
-            add: function (func, name, data, executeContext) {
+            add: function (func, name, data, ctx) {
                 name = name || "default";
-
                 if (!this.eventList[name]) {
                     this.eventList[name] = [];
                 }
-
                 var eve = {
                     func: func,
-                    data: data
+                    data: data,
+                    ctx: ctx
                 };
-
                 this.eventList[name].push(eve);
             },
             execute: function (name, context, data) {
@@ -824,7 +950,7 @@
                 var toRemove = [];
 
                 this.eventList[name].each(function (fnObj) {
-                    var execResult ;
+                    var execResult , ctx = fnObj.ctx || context;
                     if (data && data.length >= 0) {
                         var args = [];
                         for (var i = 0; i < data.length; i++) {
@@ -833,9 +959,9 @@
                         if (fnObj.data) {
                             args.push(fnObj.data);
                         }
-                        result = result && (!( (execResult = fnObj.func.apply(context, args)) == false));
+                        result = result && (!( (execResult = fnObj.func.apply(ctx, args)) == false));
                     } else {
-                        result = result && (!( (execResult = fnObj.func.call(context, data, fnObj.data) ) == false));
+                        result = result && (!( (execResult = fnObj.func.call(ctx, data, fnObj.data) ) == false));
                     }
                     if(execResult === 'removeThis'){
                         toRemove.push(fnObj);
@@ -855,17 +981,17 @@
 
         event.events = event._event.eventList;
 
-        event.register = function (fnName, executeContext) {
+        event.register = function (fnName, registerCtx) {
             if (event._event[fnName]) {
                 return event._event[fnName]
             }
-            var func = function (func, data) {
+            var func = function (func, data, ctx) {
                 if (typeof (func) == 'function') {
-                    avril.event._event.add(func, fnName, data, executeContext);
+                    avril.event._event.add(func, fnName, data, ctx || registerCtx);
                 } else { //func is a param when ajax-submit execute
                     data = data || func;
-                    executeContext = executeContext || data;
-                    return avril.event._event.execute(fnName, executeContext, data);
+                    registerCtx = registerCtx || data;
+                    return avril.event._event.execute(fnName, registerCtx, data);
                 }
             }
             func.clear = function () {
