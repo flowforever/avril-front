@@ -28,6 +28,7 @@
             }
             ,  _rootScopes = {
                 $root:{}
+                , $controllers: {}
             }
             , _expressionReg = /\$(data|scope|root|parent)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
             , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*)+(\.\w+\d*)*)+$/g; }
@@ -313,7 +314,7 @@
             if(expression.indexOf('$ns:') >= 0){
                 $el.data(binderName('scope'), executeExpression(expression.replace('$ns:',''), $el.parent()));
             }
-        })
+        });
 
         addBinder('bind',function($el,value, options){
             if(options.sourceElement && $el.is(options.sourceElement)){
@@ -346,6 +347,7 @@
         addBinder('each', {
             init: function($el,value){
                 avril.data($el[0], $el.html());
+                $el.children().attr(binderName('stop'),'true');
                 this.renderItems($el,value);
                 var subscribers = self.subscribeArray( self.getAbsNs($el, 'each'));
                 subscribers.push(function(){
@@ -358,7 +360,6 @@
 
                 });
                 subscribers.removeAt(function(){
-
                 });
             }
             , update: function($el,value){
@@ -366,9 +367,7 @@
                 this.renderItems($el,value);
             }
             , renderItems: function($el,value){
-                if($el.find(binderName('each-item')).length){
-                    avril.data(avril.getHash($el[0])+'item', $el.find(binderName('each-item') ).html());
-                }
+                var $itemTemplate = this.getItemTemplate($el);
                 value = value();
                 if(!value){
                     value = [];
@@ -378,6 +377,21 @@
 
                     });
                 }
+            }
+            , itemTemplateDataName: 'av-each-item-template'
+            , getTemplateSource : function($el){
+                var $itemTemplate = $el.find('[' + binderName('each-item') + '!="generated"]');
+                if($itemTemplate.length == 0){
+                    $itemTemplate = $el.children();
+                }
+                return $itemTemplate.hide();
+            }
+            , getItemTemplate : function($el){
+                return this.getTemplateSource($el).clone()
+                    .removeAttr('stop').attr(binderName('each-item'),"generated")
+                    .show();
+            }
+            , parseItemTemplate : function($item){
 
             }
         });
