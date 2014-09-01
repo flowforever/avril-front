@@ -10,7 +10,9 @@
     <!-- Optional theme -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
 
-
+    <!--[if lt IE 8]>
+    <link href="../ref/bootstrap/css/bootstrap-ie7.css" rel="stylesheet">
+    <![endif]-->
 
     <script src="../ref/jquery-1.11.1.js"></script>
     <script src="../avril.js"></script>
@@ -38,30 +40,11 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">Project name</a>
+                <a class="navbar-brand" href="#">Avril mvvm</a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    <li class="active"><a href="#">Home</a></li>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <span class="caret"></span></a>
-                        <ul class="dropdown-menu" role="menu">
-                            <li><a href="#">Action</a></li>
-                            <li><a href="#">Another action</a></li>
-                            <li><a href="#">Something else here</a></li>
-                            <li class="divider"></li>
-                            <li class="dropdown-header">Nav header</li>
-                            <li><a href="#">Separated link</a></li>
-                            <li><a href="#">One more separated link</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <ul class="nav navbar-nav navbar-right">
-                    <li><a href="../navbar/">Default</a></li>
-                    <li><a href="../navbar-static-top/">Static top</a></li>
-                    <li class="active"><a href="./">Fixed top</a></li>
+                    <li class="active"><a href="/">Home</a></li>
                 </ul>
             </div><!--/.nav-collapse -->
         </div>
@@ -70,164 +53,146 @@
         <!-- Main component for a primary marketing message or call to action -->
         <!-- Main component for a primary marketing message or call to action -->
         <h2>av-bind</h2>
-        <form class="form-horizontal" role="form" av-scope="form">
-            <div class="form-group">
-                <label class="col-sm-2 control-label">Email</label>
-                <div class="col-sm-5">
-                    <input type="email" class="form-control"  av-bind="email">
-                </div>
-                <div class="col-sm-5">
-                    <p av-bind="email"></p>
-                </div>
-            </div>
+        <div class="row well" av-scope="avBind">
+            <form class="form-horizontal" role="form" av-scope="form">
 
-            <div class="form-group">
-                <label class="col-sm-2 control-label">FirstName</label>
-                <div class="col-sm-5">
-                    <input type="text" class="form-control"  av-bind="firstName">
-                </div>
-                <div class="col-sm-5">
-                    <p av-bind="firstName"></p>
-                </div>
-            </div>
 
-            <div class="form-group">
-                <label class="col-sm-2 control-label">LastName</label>
-                <div class="col-sm-5">
-                    <input type="text" class="form-control"  av-bind="lastName">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">FirstName</label>
+                    <div class="col-sm-5">
+                        <input type="text" class="form-control"  av-bind="firstName">
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="control-label" av-bind="firstName"></label>
+                    </div>
                 </div>
-                <div class="col-sm-5">
-                    <p av-bind="lastName"></p>
-                </div>
-            </div>
 
-            <div class="form-group">
-                <label class="col-sm-2 control-label">FullName</label>
-                <div class="col-sm-5">
-                    <input type="text" class="form-control" 
-                           av-bind="$scope.firstName +' '+ $scope.lastName" readonly>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">LastName</label>
+                    <div class="col-sm-5">
+                        <input type="text" class="form-control"  av-bind="lastName">
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="control-label" av-bind="lastName"></label>
+                    </div>
                 </div>
-            </div>
-        </form>
 
-        <h2>Visit $root.form.*</h2>
-        <div class="row">
-            <label>$root.form.firstName</label>
-            <p av-bind="$root.form.firstName"></p>
-        </div>
-        <!---
-        <div av-scope="model.array" av-each="$scope">
-            <span av-bind="$index()" av-if="$item.name"></span>
-        </div>
-        <div>
-            $root.model.obj.key1 : <span av-bind="$root.model.obj.key3"></span>
-        </div>
-        <span av-bind="$root.model.obj.key1"></span>
-        <input av-bind="$root.model.obj.key1"/>
-        <div av-scope="model">
-            <div av-scope="obj">
-                <span av-bind="key1"></span>
-                <span av-bind="key2"></span>
-            </div>
-            <div av-scope="obj">
-                <input av-bind="key1" />
-                <input av-bind="key2" />
-            </div>
-            <div av-scope="array" av-each="$scope">
-                <span av-bind="$index()" av-if="$item.name"></span>
-            </div>
-            <div av-stop="true">
-                don't have any binding here
-                <div av-scope="array" av-each="$scope">
-                    <span av-bind="$index()" av-if="$item.name"></span>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Email</label>
+                    <div class="col-sm-5">
+                        <input type="email" class="form-control"  av-bind="email">
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="control-label" av-bind="email"></label>
+                    </div>
                 </div>
-            </div>
-            <div av-stop="true"></div>
-            <script type="av/script" av-execContent="true">
-            </script>
-        </div>
-        <input av-bind="$root.model.obj.key1" />
-        <div av-scope="other">
-            <form av-scope="form">
-                <input av-bind="name"/>
-                <input av-bind="email"/>
+
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">FullName</label>
+                    <div class="col-sm-5">
+                        <input type="text" class="form-control"
+                               av-bind="$scope.firstName +' '+ $scope.lastName" readonly>
+                    </div>
+                </div>
+
+
             </form>
-            <div av-scope="$root.model">
-                <span av-bind="obj.key1"></span>
-            </div>
-        </div>
-        <div av-scope="other">
-            <form av-scope="form">
-                <input av-bind="name"/>
-                <input av-bind="email"/>
-            </form>
-            <div av-scope="$root.model">
-                <span av-bind="obj.key1"></span>
-            </div>
-        </div>
-        <ul av-each="$scope.array">
-            <li av-each-item="" av-scope="$item">
-                <span av-bind=""></span>
-                <span av-bind="$item.text"></span>
-            </li>
-        </ul>
-
-        <div av-scope="calculate" av-controller="testController">
-            <input name="val0" value="2" av-bind="val0">
-            <input name="val1" value="1" av-bind="val1">
-            <input av-bind="$scope.val0 + $scope.val1">
-            <input av-bind="$try($scope.val0) + $try($scope.val1)">
-            <input av-bind="$scope.val0 + '' + $scope.val1">
-            <input av-bind="val0" av-event-keyup="val0KeyUp">
-            <a av-event-click=""></a>
-        </div>
-
-        <input av-bind="b.isTrue" />
-        <input av-bind="attr.prop" />
-
-        <div av-if="b.isTrue">
-            I am true
-        </div>
-
-        <div av-css="{ hello: $try($root.b.isTrue), world:true }" av-style="{ width:400 }"
-             av-attr="{hello:10, prop:$try($root.attr.prop) }">
-        </div>
-        <div av-scope="$ns:$guid()">
-            <p>random scope</p>
-            <input av-bind="name"/>
-            <input av-bind="email"/>
-        </div>
-        <div av-scope="$ns:$guid()">
-            <p>random scope</p>
-            <input av-bind="name"/>
-            <input av-bind="name"/>
-            <input av-bind="email"/>
-
-            <div av-scope="statics">
-                <div av-scope="$ns:$guid()">
-                    <p>random scope</p>
-                    <input av-bind="name"/>
-                    <input av-bind="name"/>
-                    <input av-bind="email"/>
+            <div class="form-group">
+                <label class="col-sm-3 control-label">$root.avBind.form.firstName</label>
+                <div class="col-sm-5">
+                    <label av-bind="$root.avBind.form.firstName"></label>
                 </div>
             </div>
-            <div av-scope="$ns:$guid()">
-                <p>random scope</p>
-                <input av-bind="name"/>
-                <input av-bind="name"/>
-                <input av-bind="email"/>
+        </div>
+
+        <h2>av-if / av-visible / av-visibleIf</h2>
+        <div class="well row form-horizontal" av-scope="avIf">
+            <div class="form-group">
+                <div class="col-sm-2"><input class="form-control" av-bind="ifTrue"/></div>
+                <div class="col-sm-3">
+                    <label class="control-label">some thing is behind this</label>
+                </div>
+                <div class="col-sm-4">
+                    <span av-visibleIf="$scope.ifTrue">
+                        <button class="btn btn-success">See me ($scope.ifTrue==true)</button>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-sm-2"><input class="form-control" av-bind="visibleTrue"/></div>
+                <div class="col-sm-3">
+                    <label class="control-label">some thing is behind this</label>
+                </div>
+                <div class="col-sm-4">
+                    <span av-visible="$scope.visibleTrue">
+                        <button class="btn btn-success">See me ($scope.ifTrue==true)</button>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-sm-2"><input class="form-control" av-bind="visibleIfTrue"/></div>
+                <div class="col-sm-3">
+                    <label class="control-label">some thing is behind this</label>
+                </div>
+                <div class="col-sm-4">
+                    <span av-visibleIf="$scope.visibleIfTrue">
+                        <button class="btn btn-success">See me ($scope.ifTrue==true)</button>
+                    </span>
+                </div>
             </div>
         </div>
-        <div av-stop>
-            <p>nothing happens here</p>
-            <div av-if="b.isTrue">
-                I am true
+
+        <h2>av-css</h2>
+        <div class="row well form-horizontal" av-scope="avCss">
+            <div class="col-sm-2">
+                <input class="form-control" av-bind="$scope.btnLg" placeholder="btnLg"/>
             </div>
-            <div av-scope="$ns()"></div>
+            <div class="col-sm-2">
+                <input class="form-control" av-bind="$scope.btnDanger" placeholder="btnDanger"/>
+            </div>
+            <div class="col-sm-4">
+                <a class="btn btn-lg btn-default" av-css="{ 'btn-lg' : $scope.btnLg , 'btn-danger': $scope.btnDanger }">
+                    { 'btn-lg' : $scope.btnLg , 'btn-danger': $scope.btnDanger }
+                </a>
+            </div>
         </div>
-        <div av-scope="model" av-each="array">
-            <div av-scope="" av-stop></div>
-        </div>-->
+
+        <h2>av-style</h2>
+        <div class="row well form-horizontal" av-scope="avStyle">
+            <div class="col-sm-2">
+                <input class="form-control" av-bind="$scope.width" placeholder="width"/>
+            </div>
+            <div class="col-sm-2">
+                <input class="form-control" av-bind="$scope.height" placeholder="height"/>
+            </div>
+            <div class="col-sm-4">
+                <a class="btn btn-default"
+                   av-style="{ 'width' : $scope.width || 400 , 'height': $scope.height || 35 }">
+                    { 'width' : $scope.width || 400 , 'height': $scope.height || 50 }
+                </a>
+            </div>
+        </div>
+
+        <h2>av-attr</h2>
+        <div class="row well form-horizontal" av-scope="avStyle">
+            <div class="col-sm-4">
+                <input class="form-control" av-bind="$scope.title" placeholder="title"/>
+            </div>
+            <div class="col-sm-4">
+                <a class="btn btn-default"
+                   av-attr="{ 'title' : $scope.title }">
+                    please hover me -->
+                    { 'title' : <span av-bind="$scope.title"></span> }
+                </a>
+            </div>
+        </div>
+
+        <h2>av-each</h2>
+        <div class="row well form-horizontal" av-scope="avEach">
+
+        </div>
     </div>
 </body>
 </html>

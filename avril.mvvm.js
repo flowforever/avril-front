@@ -71,15 +71,17 @@
                         if(!Mvvm.elementExists($el)){
                             return 'removeThis';
                         }
-                        updateElement($el, options);
+                        updateElement($el, $.extend( options , {dependencies: watchPath} ));
                     }, {
                         binder: binder
                         , $el: $el
+                        , dependencies: watchers
                     });
                 });
 
                 Mvvm.devInfo($el,'dependency',watchers.join(','));
 
+                return watchers;
             }
             , parseExpression = function(expression){
                 expression = expression.replace(/^\s+|\s+$/g,'');
@@ -122,10 +124,11 @@
                 var binders = getBinders($el);
                 avril.object(binders).keys().each(function(name){
                     var expression = $el.attr(binderName(name));
-                    initDependency(expression , $el , name );
+                    var dependencies = initDependency(expression , $el , name );
                     binders[name].init($el, valueAccessor($el,expression),{
                         expression: expression
                         , ns: self.getNs($el)
+                        , dependencies: dependencies
                     });
                 });
             }
@@ -302,8 +305,6 @@
         this.getAbsNs = function($el, binder){
             var ns = this.getNs($el);
             var relativeNs = $el.attr(binderName(binder || 'bind'));
-
-
             return resolveAbsNs(ns,relativeNs);
         };
 
@@ -323,7 +324,7 @@
                 }
             }
             var val = value();
-            if($el.is('input')){
+            if($el.is('input')) {
                 if($el.is(':checkbox') || $el.is(':radio')){
                     $el.attr('checked' , $el.val() === val );
                 }else{
@@ -345,26 +346,51 @@
         });
 
         addBinder('each', {
-            init: function($el,value){
+            init: function($el,value, options){
                 avril.data($el[0], $el.html());
                 $el.children().attr(binderName('stop'),'true');
                 this.renderItems($el,value);
-                var subscribers = self.subscribeArray( self.getAbsNs($el, 'each'));
-                subscribers.push(function(){
-
-                });
-                subscribers.remove(function(){
-
-                });
-                subscribers.clear(function(){
-
-                });
-                subscribers.removeAt(function(){
-                });
+                this.subscribeArrayEvent($el,options);
             }
             , update: function($el,value){
                 $el.html(avril.data($el[0]));
                 this.renderItems($el,value);
+            }
+            , subscribeArrayEvent: function($el,options){
+                var self = this;
+                var dependencies ;
+                if(getSimpleReg().test(options.expression)){
+                    dependencies = [self.getAbsNs($el, 'each')];
+                }else{
+                    dependencies = options.dependencies;
+                }
+                dependencies.each(function(dep){
+                    var events = self.subscribeArray( dep );
+
+                    events.push(function(item,options){
+                        if(!$el.is(options.$sourceElement)){
+
+                        }
+                    });
+
+                    events.remove(function(item,options){
+                        if(!$el.is(options.$sourceElement)){
+
+                        }
+                    });
+
+                    events.clear(function(options){
+                        if(!$el.is(options.$sourceElement)){
+
+                        }
+                    });
+
+                    events.concat(function(options){
+                        if(!$el.is(options.$sourceElement)){
+
+                        }
+                    });
+                });
             }
             , renderItems: function($el,value){
                 var $itemTemplate = this.getItemTemplate($el);
@@ -391,9 +417,6 @@
                     .removeAttr('stop').attr(binderName('each-item'),"generated")
                     .show();
             }
-            , parseItemTemplate : function($item){
-
-            }
         });
 
         addBinder('if',{
@@ -416,6 +439,21 @@
             }
         });
 
+        addBinder('visible',function($el,value){
+            value()? $el.show() : $el.hide();
+        });
+
+        addBinder('visibleIf', {
+            init: function($el,value){
+                binders['if'].init($el, value);
+                binders.visible.init($el,value);
+            }
+            , update: function($el,value){
+                binders['if'].update($el, value);
+                binders.visible.update($el,value);
+            }
+        });
+
         addBinder('template',{
             init: function(){
 
@@ -428,25 +466,19 @@
             }
         });
 
-        addBinder('attr',{
-            init:function($el,value){
-                value = value();
-                $el.attr(value || {});
-            }
+        addBinder('attr',function($el,value){
+            value = value();
+            $el.attr(value || {});
         });
 
-        addBinder('style',{
-            init: function($el,value){
-                $el.css(value() || {});
-            }
+        addBinder('style',function($el,value){
+            $el.css(value() || {});
         });
 
-        addBinder('css',{
-            init:function($el,value){
-                value = value()||{};
-                for(var k in value){
-                    $el[value[k]? 'addClass':'removeClass'](k);
-                }
+        addBinder('css',function($el,value){
+            value = value()||{};
+            for(var k in value){
+                $el[value[k]? 'addClass':'removeClass'](k);
             }
         });
 
@@ -513,9 +545,6 @@
                 }
                 , concat:function(items) {
                     getArray().concat(items);
-                }
-                , removeAt: function(index) {
-                    getArray().removeAt(index);
                 }
                 , remove: function(item) {
                     getArray().remove(item);
