@@ -10,7 +10,7 @@
 </head >
 <body >
 
-    <div av-scope="model.array" av-each="$scope,$item,$index">
+    <div av-scope="model.array" av-each="$scope">
         <span av-bind="$index()" av-if="$item.name"></span>
     </div>
     <div>
@@ -118,6 +118,9 @@
             I am true
         </div>
         <div av-scope="$ns()"></div>
+    </div>
+    <div av-scope="model" av-each="array">
+
     </div>
 </body >
 </html >

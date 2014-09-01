@@ -30,6 +30,7 @@
                 $root:{}
             }
             , _expressionReg = /\$(data|scope|root|parent)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
+            , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*)+(\.\w+\d*)*)+$/g; }
             , resolveExpressWatchers = function(){
                 var cache = {};
                 return function(expression){
@@ -282,6 +283,10 @@
                 return relativeNs;
             }
             relativeNs = relativeNs.replace('$scope.','');
+
+            if(!getSimpleReg().test(relativeNs)){
+                relativeNs = '';
+            }
             if(relativeNs.indexOf('$parent') < 0){
                 return ns +'.' + relativeNs;
             }
@@ -291,10 +296,13 @@
                 relativeNs = relativeNs.replace('$parent.','');
             }
             return nsPaths.join('.')+'.'+relativeNs;
-        }
-        this.getAbsNs = function($el){
+        };
+
+        this.getAbsNs = function($el, binder){
             var ns = this.getNs($el);
-            var relativeNs = $el.attr(binderName('bind'));
+            var relativeNs = $el.attr(binderName(binder || 'bind'));
+
+
             return resolveAbsNs(ns,relativeNs);
         };
 
@@ -339,19 +347,38 @@
             init: function($el,value){
                 avril.data($el[0], $el.html());
                 this.renderItems($el,value);
+                var subscribers = self.subscribeArray( self.getAbsNs($el, 'each'));
+                subscribers.push(function(){
+
+                });
+                subscribers.remove(function(){
+
+                });
+                subscribers.clear(function(){
+
+                });
+                subscribers.removeAt(function(){
+
+                });
             }
             , update: function($el,value){
                 $el.html(avril.data($el[0]));
                 this.renderItems($el,value);
             }
             , renderItems: function($el,value){
-                if($el.find(binderName('each-item') ).length){
+                if($el.find(binderName('each-item')).length){
                     avril.data(avril.getHash($el[0])+'item', $el.find(binderName('each-item') ).html());
                 }
                 value = value();
                 if(!value){
                     value = [];
                 }
+                if(value instanceof Array){
+                    value.each(function(){
+
+                    });
+                }
+
             }
         });
 
@@ -434,8 +461,7 @@
 
         //add $scope or $root to simple expresion
         addExpressionParser(function(expression){
-            var _simpleExpressionReg = /^(\w+\d*)+(\.\w+\d*)*$/g;
-            if(_simpleExpressionReg.test(expression) && !/^\d+/.test(expression)){
+            if(getSimpleReg().test(expression) && !/^\d+/.test(expression)){
                 if(expression.indexOf('$root') == 0){
                     return expression;
                 }
@@ -467,7 +493,7 @@
                 return arr;
             }
 
-            var outerAPI, innerAPI = {
+            var outerAPI = {}, innerAPI = {
                 push: function(item) {
                     getArray().push(item);
                 }
@@ -493,7 +519,18 @@
             }
 
             return outerAPI;
-        }
+        };
+
+        this.subscribeArray = function (){
+            var arrayApi = avril.object(self.array()).keys();
+            return function(ns){
+                var subscribers = {};
+                arrayApi.each(function(opt){
+                    subscribers[opt] = getEventChannel( optEvent(ns,opt) );
+                });
+                return subscribers;
+            }
+        }();
 
     });
 
@@ -515,10 +552,6 @@
     Mvvm.elementExists = function($el){
         return $el.parents('html').length > 0 || $el.is('html');
     };
-
-    Mvvm.random = function(){
-        return 'scope-' + avril.guid();
-    }
 
     Mvvm.executeExpression = function(expression,ctx){
         return _evalExpression.call(ctx,expression);
