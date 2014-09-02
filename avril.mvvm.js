@@ -34,14 +34,15 @@
             , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*)+(\.\w+\d*)*)+$/g; }
             , resolveExpressWatchers = function(){
                 var cache = {};
-                return function(expression){
+                return function(expression, onFind){
                     expression = expression.replace(/^\s+|\s+$/g,'');
                     if(cache[expression]){
-                        return cache[expression];
+                        return cache[expression].each(onFind);
                     }
                     var watchers = [] , watcher;
                     while(watcher = _expressionReg.exec(expression) ){
                         watchers.push(watcher[0]);
+                        onFind && onFind(watcher[0]);
                     }
                     return cache[expression] = watchers;
                 };
@@ -58,14 +59,11 @@
                     , $el: $el
                 });
             }
-            , initDependency = function(expression, $el, binder){
-                var ns = self.getNs($el);
+            , initDependency = function(expression, $el, binder , ns){
 
                 var parsedExpressionStr = parseExpression(expression);
 
-                var watchers = resolveExpressWatchers(parsedExpressionStr);
-
-                watchers.each(function(watchPath){
+                var watchers = resolveExpressWatchers(parsedExpressionStr,function(watchPath){
                     var absNs = resolveAbsNs(ns, watchPath);
                     self.subscribe(absNs, function(newValue,oldValue,options){
                         if(!Mvvm.elementExists($el)){
@@ -113,6 +111,9 @@
             }
             , initElement = function(el){
                 var $el = $(el);
+                if(!Mvvm.elementExists($el)){
+                    return true;
+                }
                 var stopAttrSelector = '['+binderName('stop')+']';
                 if($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length){
                     return true;
@@ -122,15 +123,18 @@
                 }
                 $el.data('av-inited', true);
                 var binders = getBinders($el);
-                avril.object(binders).keys().each(function(name){
-                    var expression = $el.attr(binderName(name));
-                    var dependencies = initDependency(expression , $el , name );
-                    binders[name].init($el, valueAccessor($el,expression),{
-                        expression: expression
-                        , ns: self.getNs($el)
-                        , dependencies: dependencies
-                    });
-                });
+                for(var nName in binders){
+                    (function(bName){
+                        var expression = $el.attr(binderName(bName));
+                        var ns = self.getNs($el);
+                        var dependencies = initDependency(expression , $el , bName ,ns );
+                        binders[bName].init($el, valueAccessor($el,expression),{
+                            expression: expression
+                            , ns: ns
+                            , dependencies: dependencies
+                        });
+                    })(nName);
+                }
             }
             , updateElement = function(el, updateOptions){
                 var $el = $(el);
@@ -195,12 +199,27 @@
             magics[name] = func;
         };
 
-        this.bindDom = function($el){
+        this.bindDom = function(el){
             bindGlobal();
-            $el = $el? $($el) : $(document);
-            $el.add( $el.find(self.selector)).filter(':not(html)').each(function(){
-                initElement(this);
+
+            var $el = !el || el === document?  $('html') : $(el);
+
+            !$el.is('html') && initElement($el);
+
+            $el.find(self.selector).each(function(i){
+                avril.execTime(function(){
+                    initElement(this);
+                }.bind(this));
             });
+
+            if( !$el.is('html')){
+                var max = Math.max.apply(null,avril.execTime.funcTimes);
+                var maxIndex = avril.execTime.funcTimes.indexOf(max);
+                console.log(avril.execTime.funcTimes.join(','));
+                console.log(max);
+                console.log(maxIndex);
+                console.log($el.find(self.selector)[maxIndex]);
+            }
         };
 
         var getEventChannel = function(subscribePath){
@@ -245,6 +264,10 @@
         };
 
         this.getNs = function($el){
+            if($el.data(binderName('ns'))){
+                return $el.data(binderName('ns'));
+            }
+
             var ns = ''
                 , nsBinderName = Mvvm.bindingName('scope')
                 , $parents = $el.parents('['+nsBinderName+']');
@@ -277,6 +300,8 @@
             ns = ns.replace(/\.$/g,'');
 
             Mvvm.devInfo($el,'scope',ns);
+
+            $el.data(binderName('ns'),ns);
 
             return ns;
         };
@@ -393,19 +418,33 @@
                 });
             }
             , renderItems: function($el,value){
+                $el.data(binderName(this.itemTemplateDataName),null);
                 var binder = this;
+                var guid = 'guid-' + avril.guid();
+                var replaceMement = '<span>'+guid+'</span>';
                 var $start = this.getStart(this.getTemplateSource($el));
                 var items = value();
                 if(!items){
                     items = [];
                 }
                 if(items instanceof Array){
-                    items.each(function(item){
-                        var $itemTemplate = binder.generateItem($el);
-                        $start.after($itemTemplate);
-                        $start = binder.getStart($itemTemplate.last());
-                    });
-                    self.bindDom($el);
+                    var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
+                        .toArray()
+                        .select(function(o){
+                            return o.outerHTML;
+                        }).join('');
+
+                    var itemsHtml = items.select(function(item, index){
+                        return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
+                    }).join('');
+
+                    $start.before(replaceMement);
+
+                    var currentElHtml = $el[0].innerHTML;
+
+                    $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
+
+                    self.bindDom($el, '[av-scope]');
                 }
             }
             , getStart : function($el){
@@ -419,11 +458,15 @@
             , eachItemAttrName :binderName('each-item')
             , itemTemplateDataName: 'av-each-item-template'
             , getTemplateSource : function($el){
+                if($el.data(binderName(this.itemTemplateDataName))){
+                    return $el.data(binderName(this.itemTemplateDataName));
+                }
                 var itemAttrName = this.eachItemAttrName;
                 var $itemTemplate = $el.find('[' + itemAttrName + '=true]');
                 if($itemTemplate.length == 0){
                     $itemTemplate = $el.children().attr(itemAttrName,'true');
                 }
+                $el.data(binderName(this.itemTemplateDataName), $itemTemplate);
                 return $itemTemplate.hide();
             }
             , generateItem : function($el){
@@ -543,6 +586,11 @@
             return getScope(this.$ns, $parent);
         });
 
+        addMagic('$setVal', function(ns, val){
+            self.setVal(ns,val);
+            return val;
+        });
+
         this.array = function(ns){
 
             var getArray = function(){
@@ -595,7 +643,7 @@
         attr_pre: 'av'
         , show_error: false
         , trigger_events: 'change keyup'
-        , show_dev_info : true
+        , show_dev_info : false
     };
 
     Mvvm.bindingName = function(name){

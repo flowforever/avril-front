@@ -250,9 +250,6 @@
 
         instance.select = function (func) {
             func = parseFuncLambda(func);
-            if(this.map){
-                return this.map(func);
-            }
             var results = [];
             this.each(function (value, index) {
                 results.push(func.call(value, value, index));
@@ -1519,7 +1516,16 @@
 
     //#endregion
 
-
+    avril.execTime = function(func,name){
+        var t0 = new Date().getTime();
+        func && func();
+        var t1 = new Date().getTime() - t0;
+        avril.execTime.funcTimes.push(t1);
+        name && (avril.execTime.funcTimeMap[name] = t1);
+        return t1;
+    };
+    avril.execTime.funcTimes = [];
+    avril.execTime.funcTimeMap = {};
 
     //
     if (!window.console) {

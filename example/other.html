@@ -51,147 +51,71 @@
     </div>
 </div>
 <div class="container">
-    <!-- Main component for a primary marketing message or call to action -->
-    <!-- Main component for a primary marketing message or call to action -->
-    <h2>av-bind</h2>
-    <div class="row well" av-scope="avBind">
-        <form class="form-horizontal" role="form" av-scope="form">
-
-            <div class="form-group">
-                <label class="col-sm-2 control-label">FirstName</label>
-                <div class="col-sm-5">
-                    <input type="text" class="form-control"  av-bind="firstName">
-                </div>
-                <div class="col-sm-5">
-                    <label class="control-label" av-bind="firstName"></label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="col-sm-2 control-label">LastName</label>
-                <div class="col-sm-5">
-                    <input type="text" class="form-control"  av-bind="lastName">
-                </div>
-                <div class="col-sm-5">
-                    <label class="control-label" av-bind="lastName"></label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="col-sm-2 control-label">Email</label>
-                <div class="col-sm-5">
-                    <input type="email" class="form-control"  av-bind="email">
-                </div>
-                <div class="col-sm-5">
-                    <label class="control-label" av-bind="email"></label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="col-sm-2 control-label">FullName</label>
-                <div class="col-sm-5">
-                    <input type="text" class="form-control"
-                           av-bind="$scope.firstName +' '+ $scope.lastName" readonly>
-                </div>
-            </div>
-
-
-        </form>
-        <div class="form-group">
-            <label class="col-sm-3 control-label">$root.avBind.form.firstName</label>
-            <div class="col-sm-5">
-                <label av-bind="$root.avBind.form.firstName"></label>
-            </div>
-        </div>
-    </div>
-
-    <h2>av-if / av-visible / av-visibleIf</h2>
-    <div class="well row form-horizontal" av-scope="avIf">
-        <div class="form-group">
-            <div class="col-sm-2"><input class="form-control" av-bind="ifTrue"/></div>
-            <div class="col-sm-3">
-                <label class="control-label">some thing is behind this</label>
-            </div>
-            <div class="col-sm-4">
-                    <span av-visibleIf="$scope.ifTrue">
-                        <button class="btn btn-success">See me ($scope.ifTrue==true)</button>
-                    </span>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-sm-2"><input class="form-control" av-bind="visibleTrue"/></div>
-            <div class="col-sm-3">
-                <label class="control-label">some thing is behind this</label>
-            </div>
-            <div class="col-sm-4">
-                    <span av-visible="$scope.visibleTrue">
-                        <button class="btn btn-success">See me ($scope.ifTrue==true)</button>
-                    </span>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-sm-2"><input class="form-control" av-bind="visibleIfTrue"/></div>
-            <div class="col-sm-3">
-                <label class="control-label">some thing is behind this</label>
-            </div>
-            <div class="col-sm-4">
-                    <span av-visibleIf="$scope.visibleIfTrue">
-                        <button class="btn btn-success">See me ($scope.ifTrue==true)</button>
-                    </span>
-            </div>
-        </div>
-    </div>
-
-    <h2>av-css</h2>
-    <div class="row well form-horizontal" av-scope="avCss">
-        <div class="col-sm-2">
-            <input class="form-control" av-bind="$scope.btnLg" placeholder="btnLg"/>
-        </div>
-        <div class="col-sm-2">
-            <input class="form-control" av-bind="$scope.btnDanger" placeholder="btnDanger"/>
-        </div>
-        <div class="col-sm-4">
-            <a class="btn btn-lg btn-default" av-css="{ 'btn-lg' : $scope.btnLg , 'btn-danger': $scope.btnDanger }">
-                { 'btn-lg' : $scope.btnLg , 'btn-danger': $scope.btnDanger }
-            </a>
-        </div>
-    </div>
-
-    <h2>av-style</h2>
-    <div class="row well form-horizontal" av-scope="avStyle">
-        <div class="col-sm-2">
-            <input class="form-control" av-bind="$scope.width" placeholder="width"/>
-        </div>
-        <div class="col-sm-2">
-            <input class="form-control" av-bind="$scope.height" placeholder="height"/>
-        </div>
-        <div class="col-sm-4">
-            <a class="btn btn-default"
-               av-style="{ 'width' : $scope.width || 400 , 'height': $scope.height || 35 }">
-                { 'width' : $scope.width || 400 , 'height': $scope.height || 50 }
-            </a>
-        </div>
-    </div>
-
-    <h2>av-attr</h2>
-    <div class="row well form-horizontal" av-scope="avStyle">
-        <div class="col-sm-4">
-            <input class="form-control" av-bind="$scope.title" placeholder="title"/>
-        </div>
-        <div class="col-sm-4">
-            <a class="btn btn-default"
-               av-attr="{ 'title' : $scope.title }">
-                please hover me -->
-                { 'title' : <span av-bind="$scope.title"></span> }
-            </a>
-        </div>
-    </div>
-
     <h2>av-each</h2>
-    <div class="row well form-horizontal" av-scope="avEach">
+    <h3> simple each (10000)</h3>
+    <div class="row well form-horizontal" av-scope="simpleEach">
+        <table class="table table-condensed">
+            <thead av-visible="false">
+            <tr> <th av-bind="$setVal('$root.simpleEachTime',Date.now())"></th> </tr>
+            </thead>
+            <tbody av-each="new Array(10000)" av-visible="false">
+                <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
+                <tr av-each-item="true">
+                    <td>lin1</td> <td>item</td>
+                </tr>
+                <tr>
+                    <td>last line</td> <td>item</td> <td>item</td>
+                </tr>
+            </tbody>
+            <tfoot>
+            <tr><th>Total time</th> <th av-bind="Date.now() - $root.simpleEachTime"></th> </tr>
+            </tfoot>
+        </table>
+    </div>
 
+    <h3> simple each (10000)</h3>
+    <div class="row well form-horizontal" av-stop="true" av-scope="simpleEach">
+        <table class="table table-condensed">
+            <thead>
+            <tr> <th av-bind="$setVal('$root.simpleEachTime1',Date.now())"></th> </tr>
+            </thead>
+            <tbody av-each="new Array(10000)" av-visible="false">
+            <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
+            <tr av-each-item="true">
+                <td>lin1</td> <td>item</td>
+            </tr>
+            <tr>
+                <td>last line</td> <td>item</td> <td>item</td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr><th>Total time</th>  <th av-bind="Date.now() - $root.simpleEachTime1"></th> </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <h3>complicate each (1000 * 10)</h3>
+    <div class="row well form-horizontal" av-stop="true" av-scope="complicateEach">
+        <table class="table table-condensed">
+            <thead>
+            <tr> <th av-bind="$setVal('$root.complicateEachTime',Date.now())"></th> </tr>
+            </thead>
+            <tbody av-each="new Array(1000)" av-visible="false">
+            <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
+            <tr av-each-item="true">
+                <td>lin1</td> <td>item</td>
+                <td av-each="new Array(10)">
+                    <span>hello world</span>
+                </td>
+            </tr>
+            <tr>
+                <td>last line</td> <td>item</td> <td>item</td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr><th>Total time</th>  <th av-bind="Date.now() - $root.complicateEachTime"></th> </tr>
+            </tfoot>
+        </table>
     </div>
 </div>
 </body>
