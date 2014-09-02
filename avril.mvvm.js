@@ -60,13 +60,11 @@
                 });
             }
             , initDependency = function(expression, $el, binder , ns){
-
                 var parsedExpressionStr = parseExpression(expression);
 
-                var watchers = resolveExpressWatchers(parsedExpressionStr,function(watchPath){
-                    var absNs = resolveAbsNs(ns, watchPath);
+                var initSubscribe = function(absNs, watchPath){
                     self.subscribe(absNs, function(newValue,oldValue,options){
-                        if(!Mvvm.elementExists($el)){
+                        if(!Mvvm.elementExists($el) || self.getNs($el) != ns){
                             return 'removeThis';
                         }
                         updateElement($el, $.extend( options , {dependencies: watchPath} ));
@@ -75,9 +73,16 @@
                         , $el: $el
                         , dependencies: watchers
                     });
+                }
+
+                var watchers = resolveExpressWatchers(parsedExpressionStr,function(watchPath){
+                    var absNs = resolveAbsNs(ns, watchPath);
+                    initSubscribe(absNs);
                 });
 
-                Mvvm.devInfo($el,'dependency',watchers.join(','));
+                initSubscribe(ns, '');
+
+                Mvvm.devInfo($el,'dependency-'+binder,watchers.join(','));
 
                 return watchers;
             }
@@ -109,7 +114,7 @@
             , binderSelector = function(name){
                 return '['+binderName(name)+']'
             }
-            , initElement = function(el){
+            , initElement = function(el) {
                 var $el = $(el);
                 if(!Mvvm.elementExists($el)){
                     return true;
@@ -123,18 +128,22 @@
                 }
                 $el.data('av-inited', true);
                 var binders = getBinders($el);
-                for(var nName in binders){
+                var ns = self.getNs($el);
+                for(var bName in binders){
                     (function(bName){
                         var expression = $el.attr(binderName(bName));
-                        var ns = self.getNs($el);
                         var dependencies = initDependency(expression , $el , bName ,ns );
                         binders[bName].init($el, valueAccessor($el,expression),{
                             expression: expression
                             , ns: ns
                             , dependencies: dependencies
                         });
-                    })(nName);
+                    })(bName);
                 }
+                Mvvm.defaults.use_text_expression && initTextNode($el, function(textNode){
+                    //var expression = textNode.nodeValue.replace('{{','').replace('}}','');
+                    //var dependencies = initDependency(expression , $el , bName ,ns );
+                });
             }
             , updateElement = function(el, updateOptions){
                 var $el = $(el);
@@ -148,6 +157,24 @@
                     }));
                 });
             }
+            , _isExpressionTextNodeReg = /\{\{.+?\}\}/g
+            , initTextNode = function($el, onFind){
+                var arr = [];
+                $el.find('*').each(function(){
+                    for(var i= 0; i<this.childNodes.length;i++){
+                        var n = this.childNodes[i];
+                        if( n.nodeType === 3
+                            && n.nodeValue
+                            && !n.inited
+                            && _isExpressionTextNodeReg.test(n.nodeValue)
+                            ) {
+                            arr.push( this.childNodes[i] );
+                            onFind(this.childNodes[i]);
+                        }
+                    }
+                }) ;
+                return arr;
+            }
             , bindGlobal = function(){
                 var binded = false;
                 return function(){
@@ -157,7 +184,7 @@
                     binded = true;
                     var attrPre = Mvvm.defaults.attr_pre;
                     var mvvm = avril.mvvm;
-                    $(avril.mvvm.selector).on(Mvvm.defaults.trigger_events,function(){
+                    $(document).on(Mvvm.defaults.trigger_events, mvvm.selector ,function(){
                         var $el = $(this);
                         if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
                             var absPath = mvvm.getAbsNs($el);
@@ -212,6 +239,7 @@
                 }.bind(this));
             });
 
+            return false;
             if( !$el.is('html')){
                 var max = Math.max.apply(null,avril.execTime.funcTimes);
                 var maxIndex = avril.execTime.funcTimes.indexOf(max);
@@ -223,8 +251,8 @@
         };
 
         var getEventChannel = function(subscribePath){
-            return avril.event.get(subscribePath,self);
-        }
+                return avril.event.get(subscribePath,self);
+            }
             , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; };
 
         this.setVal = function(ns, value , $sourceElement) {
@@ -263,8 +291,8 @@
             });
         };
 
-        this.getNs = function($el){
-            if($el.data(binderName('ns'))){
+        this.getNs = function($el , forceNew){
+            if($el.data(binderName('ns')) && !forceNew){
                 return $el.data(binderName('ns'));
             }
 
@@ -287,10 +315,14 @@
                 return ns;
             }
 
+            var isPropVisit = function(ns){
+                return ns.indexOf('[') === 0;
+            }
+
             $parents.each(function(){
                 var $parent = $(this);
                 if($parent.attr(nsBinderName)){
-                    ns = ($parent.data(nsBinderName) || $parent.attr(nsBinderName)) +'.' + ns;
+                    ns = ($parent.data(nsBinderName) || $parent.attr(nsBinderName)) + ( !isPropVisit(ns) ?  '.' : '' ) + ns;
                 }
                 if(ns.indexOf('$root') >= 0){
                     return false;
@@ -324,7 +356,8 @@
                 nsPaths.pop();
                 relativeNs = relativeNs.replace('$parent.','');
             }
-            return nsPaths.join('.')+'.'+relativeNs;
+            var pre = nsPaths.join('.');
+            return pre + (/\]$/.test(pre) ? '':'.') + relativeNs;
         };
 
         this.getAbsNs = function($el, binder){
@@ -374,8 +407,20 @@
             init: function($el,value, options){
                 avril.data($el[0], $el.html());
                 $el.children().attr(binderName('stop'),'true');
+                var vScope = ('av_'+avril.guid()).replace(/\-/g,'');
+                var scopeName = $el.data( binderName('scope')) || $el.attr( binderName('scope') );
+                if( !scopeName ){
+                    $el.data( binderName('scope') , vScope);
+                }else{
+                    $el.data( binderName('scope') , scopeName+'.'+ vScope );
+                }
+
+                self.getNs($el,true);
+
                 this.renderItems($el,value);
+
                 this.subscribeArrayEvent($el,options);
+
             }
             , update: function($el,value){
                 $el.html(avril.data($el[0]));
@@ -444,7 +489,7 @@
 
                     $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
 
-                    self.bindDom($el, '[av-scope]');
+                    self.bindDom($el);
                 }
             }
             , getStart : function($el){
@@ -637,6 +682,10 @@
             }
         }();
 
+        this.getRootScope = function(){
+            return $.extend(true, {}, _rootScopes.$root);
+        };
+
     });
 
     Mvvm.defaults = {
@@ -644,6 +693,7 @@
         , show_error: false
         , trigger_events: 'change keyup'
         , show_dev_info : false
+        , use_text_expression: false
     };
 
     Mvvm.bindingName = function(name){

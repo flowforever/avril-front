@@ -8,7 +8,7 @@
     <!-- Latest compiled and minified CSS -->
     <link rel="stylesheet" href="../ref/bootstrap/css/bootstrap.css">
     <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="../ref/bootstrap/css/bootstrap-theme.min.css">
 
     <!--[if lt IE 8]>
     <link href="../ref/bootstrap/css/bootstrap-ie7.css" rel="stylesheet">
@@ -21,7 +21,7 @@
     <script src="js/mvvm.example.js"></script>
 
     <!-- Latest compiled and minified JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="../ref/bootstrap/js/bootstrap.min.js"></script>
     <style>
         body {
             min-height: 2000px;
@@ -45,7 +45,7 @@
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
                     <li class="active"><a href="index.html">Home</a></li>
-                    <li><a href="other.html">Other</a></li>
+                    <li><a href="array.html">Array</a></li>
                 </ul>
             </div><!--/.nav-collapse -->
         </div>
@@ -189,13 +189,13 @@
             </div>
         </div>
 
-        <h2>av-each</h2>
-        <div class="row well form-horizontal" av-scope="avEach">
-            <table class="table table-condensed">
+        <h2>av-each(virtual scope)</h2>
+        <div class="row well form-horizontal" av-scope="avEach" av-visible="false">
+            <table class="table table-condensed" av-stop="true">
                 <thead>
                 <tr> <th av-bind="$setVal('$root.startTime',Date.now())"></th> </tr>
                 </thead>
-                <tbody av-each="new Array(5000)" av-visible="false">
+                <tbody av-scope="array" av-each="new Array(10)">
                     <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
                     <tr av-each-item="true"> <td>lin1</td> <td>item</td> <td>item</td> </tr>
                     <tr>
@@ -203,7 +203,30 @@
                     </tr>
                 </tbody>
                 <tfoot>
-                <tr> <th av-bind="Date.now() - $root.startTime"></th> </tr>
+                <tr> <th> <span av-bind="Date.now() - $root.startTime"></span> ms </th> </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <h2>av-each</h2>
+        <div class="row well form-horizontal" av-scope="avEach">
+            <table class="table table-condensed">
+                <thead>
+                <tr> <th av-bind="$setVal('$root.startTime',Date.now())"></th> </tr>
+                </thead>
+                <tbody av-scope="array" av-each="new Array(10)">
+                <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
+                <tr av-each-item="true">
+                    <td>Name</td> <td>
+                    <input av-bind="$scope.name"/> </td>
+                    <td av-bind="$scope.name"> </td>
+                </tr>
+                <tr>
+                    <td>last line</td> <td>item</td> <td>item</td>
+                </tr>
+                </tbody>
+                <tfoot>
+                <tr> <th> <span av-bind="Date.now() - $root.startTime"></span> ms </th> </tr>
                 </tfoot>
             </table>
         </div>
