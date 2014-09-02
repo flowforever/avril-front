@@ -258,7 +258,7 @@
                     expression: ns
                 });
                 ns = $el.data(nsBinderName) || '';
-            };
+            }
 
             if(ns.indexOf('$root.') == 0){
                 return ns;
@@ -393,28 +393,42 @@
                 });
             }
             , renderItems: function($el,value){
-                var $itemTemplate = this.getItemTemplate($el);
-                value = value();
-                if(!value){
-                    value = [];
+                var binder = this;
+                var $start = this.getStart(this.getTemplateSource($el));
+                var items = value();
+                if(!items){
+                    items = [];
                 }
-                if(value instanceof Array){
-                    value.each(function(){
-
+                if(items instanceof Array){
+                    items.each(function(item){
+                        var $itemTemplate = binder.generateItem($el);
+                        $start.after($itemTemplate);
+                        $start = binder.getStart($itemTemplate.last());
                     });
+                    self.bindDom($el);
                 }
             }
+            , getStart : function($el){
+                if($el.length == 1){
+                    return $el;
+                }
+                else{
+                    return $el.last();
+                }
+            }
+            , eachItemAttrName :binderName('each-item')
             , itemTemplateDataName: 'av-each-item-template'
             , getTemplateSource : function($el){
-                var $itemTemplate = $el.find('[' + binderName('each-item') + '!="generated"]');
+                var itemAttrName = this.eachItemAttrName;
+                var $itemTemplate = $el.find('[' + itemAttrName + '=true]');
                 if($itemTemplate.length == 0){
-                    $itemTemplate = $el.children();
+                    $itemTemplate = $el.children().attr(itemAttrName,'true');
                 }
                 return $itemTemplate.hide();
             }
-            , getItemTemplate : function($el){
+            , generateItem : function($el){
                 return this.getTemplateSource($el).clone()
-                    .removeAttr('stop').attr(binderName('each-item'),"generated")
+                    .removeAttr(binderName('stop')).attr(this.eachItemAttrName,"generated")
                     .show();
             }
         });

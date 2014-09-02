@@ -44,7 +44,8 @@
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    <li class="active"><a href="/">Home</a></li>
+                    <li class="active"><a href="index.html">Home</a></li>
+                    <li><a href="other.html">Other</a></li>
                 </ul>
             </div><!--/.nav-collapse -->
         </div>
@@ -55,7 +56,6 @@
         <h2>av-bind</h2>
         <div class="row well" av-scope="avBind">
             <form class="form-horizontal" role="form" av-scope="form">
-
 
                 <div class="form-group">
                     <label class="col-sm-2 control-label">FirstName</label>
@@ -191,7 +191,32 @@
 
         <h2>av-each</h2>
         <div class="row well form-horizontal" av-scope="avEach">
+            <table class="table table-condensed">
+                <tbody av-each="new Array(3)">
+                    <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
+                    <tr av-each-item="true"> <td>lin1</td> <td>item</td> <td>item</td> </tr>
+                    <tr av-each-item="true"> <td>lin2</td> <td>item</td> <td>item</td> </tr>
+                    <tr av-each-item="true">
+                        <td></td>
+                        <td>
+                            <div av-each="new Array(3)">
+                                <div>
+                                    hello
+                                    <div style="margin-left: 10px" av-each="new Array(2)">
+                                        <span>world </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>last line</td> <td>item</td> <td>item</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </body>
