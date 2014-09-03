@@ -32,12 +32,12 @@
             }
             , _expressionReg = /\$(data|scope|root|parent)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
             , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*)+(\.\w+\d*)*)+$/g; }
-            , resolveExpressWatchers = function(){
+            , findExpressionDependency = function(){
                 var cache = {};
                 return function(expression, onFind){
                     expression = expression.replace(/^\s+|\s+$/g,'');
                     if(cache[expression]){
-                        return cache[expression].each(onFind);
+                        return onFind? cache[expression].each(onFind) : cache[expression];
                     }
                     var watchers = [] , watcher;
                     while(watcher = _expressionReg.exec(expression) ){
@@ -47,8 +47,9 @@
                     return cache[expression] = watchers;
                 };
             }()
-            , binderName = function(binderName){
-                return Mvvm.defaults.attr_pre+'-'+binderName;
+            , binderName = Mvvm.bindingName.bind(Mvvm)
+            , binderDataName = function(bName){
+                return binderName(bName) + '-data';
             }
             , getScope = function(ns, $el){
                 var scope = avril.object( _rootScopes ).tryGetVal(ns) || {};
@@ -59,31 +60,35 @@
                     , $el: $el
                 });
             }
-            , initDependency = function(expression, $el, binder , ns){
+            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
                 var parsedExpressionStr = parseExpression(expression);
-
-                var initSubscribe = function(absNs, watchPath){
+                var counter = 0;
+                var subscribeDependency = function(absNs, dependenPath){
                     self.subscribe(absNs, function(newValue,oldValue,options){
-                        if(!Mvvm.elementExists($el) || self.getNs($el) != ns){
+                        if(!Mvvm.elementExists($el)){
                             return 'removeThis';
                         }
-                        updateElement($el, $.extend( options , {dependencies: watchPath} ));
+                        if(dependenPath || (newValue != oldValue)){
+                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
+                        }
                     }, {
                         binder: binder
                         , $el: $el
-                        , dependencies: watchers
+                        , ns: ns
                     });
-                }
+                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
+                };
+                subscribeDependency(ns);
+                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
+                    if(watchPath){
+                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
+                        subscribeDependency(absNs, watchPath);
+                        if(oldNs){
+                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
+                        }
 
-                var watchers = resolveExpressWatchers(parsedExpressionStr,function(watchPath){
-                    var absNs = resolveAbsNs(ns, watchPath);
-                    initSubscribe(absNs);
+                    }
                 });
-
-                initSubscribe(ns, '');
-
-                Mvvm.devInfo($el,'dependency-'+binder,watchers.join(','));
-
                 return watchers;
             }
             , parseExpression = function(expression){
@@ -114,7 +119,7 @@
             , binderSelector = function(name){
                 return '['+binderName(name)+']'
             }
-            , initElement = function(el) {
+            , initElement = function(el , force ) {
                 var $el = $(el);
                 if(!Mvvm.elementExists($el)){
                     return true;
@@ -123,39 +128,52 @@
                 if($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length){
                     return true;
                 }
-                if($el.data('av-inited')){
+                if($el.data('av-inited') && !force){
                     return true;
                 }
                 $el.data('av-inited', true);
-                var binders = getBinders($el);
-                var ns = self.getNs($el);
-                for(var bName in binders){
-                    (function(bName){
+                initElementBinderDependency($el);
+            }
+            , initElementBinderDependency = function(){
+                var nsCache = {}
+                    , getOldNs = function($el){
+                        return nsCache[ avril.getHash($el) ];
+                    }
+                    , cacheNs = function($el, ns){
+                        nsCache[$el] = ns;
+                    }
+                    , removeOldSubscribe = function(subscribeChanel, $el, oldNs){
+                        getEventChannel(subscribeChanel).remove(function(eventObj){
+                            if(eventObj && eventObj.data && eventObj.data.$el && eventObj.data.ns){
+                                return eventObj.data.$el.is($el) && eventObj.data.ns == oldNs;
+                            }
+                            return false;
+                        });
+                    };
+                return function($el){
+                    var binders = getBinders($el);
+                    var ns = self.getNs($el);
+                    for(var bName in binders){
                         var expression = $el.attr(binderName(bName));
-                        var dependencies = initDependency(expression , $el , bName ,ns );
+                        var dependencies = initDependency(expression , $el , bName ,ns , getOldNs($el), removeOldSubscribe);
                         binders[bName].init($el, valueAccessor($el,expression),{
                             expression: expression
                             , ns: ns
                             , dependencies: dependencies
                         });
-                    })(bName);
+                    }
+                    cacheNs($el, ns);
                 }
-                Mvvm.defaults.use_text_expression && initTextNode($el, function(textNode){
-                    //var expression = textNode.nodeValue.replace('{{','').replace('}}','');
-                    //var dependencies = initDependency(expression , $el , bName ,ns );
-                });
-            }
-            , updateElement = function(el, updateOptions){
+            }()
+            , updateElement = function(el, updateOptions, binder){
                 var $el = $(el);
                 var binders = getBinders($el);
-                avril.object(binders).keys().each(function(k){
-                    var expression = $el.attr(binderName(k));
-                    binders[k].update($el, valueAccessor($el,expression), $.extend(true,{},updateOptions,{
-                        expression: expression
-                        , binder: k
-                        , ns: self.getNs($el)
-                    }));
-                });
+                var expression = $el.attr(binderName(binder));
+                binders[binder].update($el, valueAccessor($el,expression), $.extend(true,{},updateOptions,{
+                    expression: expression
+                    , binder: binder
+                    , ns: self.getNs($el)
+                }));
             }
             , _isExpressionTextNodeReg = /\{\{.+?\}\}/g
             , initTextNode = function($el, onFind){
@@ -255,7 +273,7 @@
             }
             , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; };
 
-        this.setVal = function(ns, value , $sourceElement) {
+        this.setVal = function(ns, value , $sourceElement, silent) {
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
             if(oldValue != value){
                 if(value){
@@ -263,14 +281,14 @@
                         value = Number(value);
                     }
                 }
-                avril.object(_rootScopes).setVal(ns, value);
-                getEventChannel(ns)([ value, oldValue, { $sourceElement: $sourceElement, channel: ns } ]);
+                avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/,''), value);
+                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns } ]);
             }
         };
 
         this.getVal = function(ns){
             return avril.object(_rootScopes).tryGetVal(ns);
-        }
+        };
 
         this.subscribe = function(ns, func,options){
             var nsArr = ns.split(',');
@@ -291,51 +309,68 @@
             });
         };
 
+        var getEachScope = function($el){
+            var eachScopeName = 'each-scope'
+                , eachScopeBinderDataName = binderDataName(eachScopeName);
+
+            return $el.data( eachScopeBinderDataName );
+        };
+
         this.getNs = function($el , forceNew){
-            if($el.data(binderName('ns')) && !forceNew){
-                return $el.data(binderName('ns'));
+
+            var fullNsDataName = binderDataName('full-ns');
+
+            if($el.data(fullNsDataName) && !forceNew){
+
             }
 
-            var ns = ''
-                , nsBinderName = Mvvm.bindingName('scope')
-                , $parents = $el.parents('['+nsBinderName+']');
+            var fullNs = ''
+                , scopeBinderName = binderName('scope')
+                , scopeBinderDataName = binderDataName('scope')
+                , $parents = $el.parents('['+scopeBinderName+']')
+                , eachScope = getEachScope($el)
+                , isPropVisit = function(ns){
+                    return ns.indexOf('[') === 0;
+                };
 
-            if($el.attr(nsBinderName )){
-                ns = $el.data(nsBinderName) || $el.attr(nsBinderName);
+            if($el.attr( scopeBinderName )){
+                fullNs = $el.data(scopeBinderDataName) || $el.attr(scopeBinderName);
             }
 
-            if(ns.indexOf('$ns:') === 0){
-                binders.scope.init($el, function(){}, {
-                    expression: ns
-                });
-                ns = $el.data(nsBinderName) || '';
+            if(eachScope){
+                fullNs = eachScope;
             }
 
-            if(ns.indexOf('$root.') == 0){
-                return ns;
-            }
-
-            var isPropVisit = function(ns){
-                return ns.indexOf('[') === 0;
+            if(fullNs.indexOf('$root.') == 0){
+                return fullNs;
             }
 
             $parents.each(function(){
-                var $parent = $(this);
-                if($parent.attr(nsBinderName)){
-                    ns = ($parent.data(nsBinderName) || $parent.attr(nsBinderName)) + ( !isPropVisit(ns) ?  '.' : '' ) + ns;
+                var $parent = $(this)
+                    , eachScope = getEachScope($parent)
+                    , parentNs;
+                if($parent.attr(scopeBinderName)){
+                    parentNs = ($parent.data(scopeBinderDataName) || $parent.attr(scopeBinderName));
                 }
-                if(ns.indexOf('$root') >= 0){
+
+                if(eachScope){
+                    parentNs = eachScope;
+                }
+
+                fullNs = parentNs + ( !isPropVisit(fullNs) ?  '.' : '' ) + fullNs
+
+                if(fullNs.indexOf('$root') >= 0){
                     return false;
                 }
             });
 
-            ns = ns.replace(/\.$/g,'');
+            fullNs = fullNs.replace(/\.$/g,'');
 
-            Mvvm.devInfo($el,'scope',ns);
+            Mvvm.devInfo($el,'scope',fullNs);
 
-            $el.data(binderName('ns'),ns);
+            $el.data(binderName('ns'),fullNs);
 
-            return ns;
+            return fullNs;
         };
 
         var resolveAbsNs = function(ns, relativeNs){
@@ -370,8 +405,22 @@
 
         addBinder('scope',function($el,value,options){
             var expression = options.expression;
-            if(expression.indexOf('$ns:') >= 0){
-                $el.data(binderName('scope'), executeExpression(expression.replace('$ns:',''), $el.parent()));
+            if(!getSimpleReg().test(expression)){
+                expression = parseExpression(expression);
+                var executeResult = executeExpression(expression, $el.parent());
+                if(typeof  executeResult !== 'string'){
+                    throw new Error('invalid scope value.', $el.selector+':'+$el[0].outerHTML);
+                }
+                var dependencies = findExpressionDependency( expression );
+                var scopeDataName = binderDataName('scope');
+                if(dependencies && dependencies.length || !$el.data(scopeDataName) ){
+                    if(executeResult !== $el.data(scopeDataName)){
+                        $el.data(scopeDataName, executeResult);
+                        self.getNs($el,true);
+                        initElement( $el , true );
+                        return false;
+                    }
+                }
             }
         });
 
@@ -397,7 +446,7 @@
 
         addBinder('text',function($el,value){
             $el.text(value());
-        })
+        });
 
         addBinder('html', function($el, value){
             $el.html(value());
@@ -405,22 +454,19 @@
 
         addBinder('each', {
             init: function($el,value, options){
-                avril.data($el[0], $el.html());
+                !avril.data($el[0]) && avril.data($el[0], $el.html());
                 $el.children().attr(binderName('stop'),'true');
-                var vScope = ('av_'+avril.guid()).replace(/\-/g,'');
-                var scopeName = $el.data( binderName('scope')) || $el.attr( binderName('scope') );
-                if( !scopeName ){
-                    $el.data( binderName('scope') , vScope);
-                }else{
-                    $el.data( binderName('scope') , scopeName+'.'+ vScope );
+                if(!getSimpleReg().test(options.expression)){
+                    var vScope = ('$root.av_'+avril.guid()).replace(/\-/g,'');
+                    var eachScope = getEachScope($el);
+                    if(!eachScope){
+                        $el.data( binderDataName('each-scope') , vScope  );
+                        initElement($el, true);
+                        return false;
+                    }
                 }
-
-                self.getNs($el,true);
-
                 this.renderItems($el,value);
-
                 this.subscribeArrayEvent($el,options);
-
             }
             , update: function($el,value){
                 $el.html(avril.data($el[0]));
@@ -469,28 +515,30 @@
                 var replaceMement = '<span>'+guid+'</span>';
                 var $start = this.getStart(this.getTemplateSource($el));
                 var items = value();
-                if(!items){
-                    items = [];
-                }
-                if(items instanceof Array){
-                    var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
-                        .toArray()
-                        .select(function(o){
-                            return o.outerHTML;
-                        }).join('');
 
-                    var itemsHtml = items.select(function(item, index){
-                        return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
+                if(!items || !(items instanceof Array)){
+                    items = [];
+                    self.setVal( self.getNs($el), items, null, true );
+                }
+
+                var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
+                    .toArray()
+                    .select(function(o){
+                        return o.outerHTML;
                     }).join('');
 
-                    $start.before(replaceMement);
+                var itemsHtml = items.select(function(item, index){
+                    return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
+                }).join('');
 
-                    var currentElHtml = $el[0].innerHTML;
+                $start.before(replaceMement);
 
-                    $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
+                var currentElHtml = $el[0].innerHTML;
 
-                    self.bindDom($el);
-                }
+                $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
+
+                self.bindDom($el);
+
             }
             , getStart : function($el){
                 if($el.length == 1){

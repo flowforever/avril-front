@@ -941,7 +941,7 @@
                 arr[i] = arr[i].uperChar0();
             }
             return arr.join('');
-        }
+        };
 
         event._event = {
             eventList: {},
@@ -1014,32 +1014,35 @@
                     registerCtx = registerCtx || data;
                     return avril.event._event.execute(fnName, registerCtx, data);
                 }
-            }
+            };
+            func.remove = function(filterFunc){
+                return this.eventList().remove(filterFunc);
+            };
             func.clear = function () {
                 event._event.clear(fnName);
-            }
+            };
             func.eventList = function () {
                 return event._event.eventList[fnName];
-            }
+            };
             func.execList = function () {
-            }
+            };
             event._event[fnName] = func;
             return func;
-        }
+        };
 
         event.registerOn = function (obj, fnName, executeContext) {
             var ns = avril.getHash(obj) + '_' + fnName;
             return this.register(ns, executeContext);
-        }
+        };
 
         event.remove = function (fnName) {
             if (event._event[fnName])
                 delete event._event[fnName];
-        }
+        };
 
         event.clear = function (fnName) {
             event._event.clear(fnName);
-        }
+        };
 
         function registerEvent(eventName, ns) {
             var ns = ns || guid + '[' + index + '].';
@@ -1100,7 +1103,7 @@
             if (obj[funName] && obj[funName]._orgFunc) {
                 obj[funName] = obj[funName]._orgFunc;
             }
-        }
+        };
 
         event.get = function (name, $obj) {
             if (!$obj) {
