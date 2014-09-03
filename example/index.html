@@ -272,6 +272,14 @@
                     <td>Name</td> <td>
                     <input av-bind="$scope.name"/> </td>
                     <td av-bind="$scope.name"> </td>
+                    <td av-each="hello">
+                        <div av-each-item="true">hello</div>
+                    </td>
+                    <td av-each="new Array(parseInt(3*Math.random()))">
+                        <span av-each-item="true" av-bind="new Date().getTime()"></span>
+                        <span av-each-item="true" >,</span>
+
+                    </td>
                 </tr>
                 <tr>
                     <td>last line</td> <td>item</td> <td>item</td>

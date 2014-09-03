@@ -473,7 +473,7 @@
                 this.renderItems($el,value);
             }
             , subscribeArrayEvent: function($el,options){
-                var self = this;
+                var binder = this;
                 var dependencies ;
                 if(getSimpleReg().test(options.expression)){
                     dependencies = [self.getAbsNs($el, 'each')];
@@ -506,6 +506,7 @@
 
                         }
                     });
+
                 });
             }
             , renderItems: function($el,value){
