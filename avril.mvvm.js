@@ -139,7 +139,7 @@
             , binderSelector = function(name){
                 return '['+binderName(name)+']'
             }
-            , initElement = function(el , force ) {
+            , initElement = function( el , force ) {
                 var $el = $(el);
                 if(!Mvvm.elementExists($el)){
                     return true;
@@ -152,7 +152,11 @@
                     return true;
                 }
                 $el.data('av-inited', true);
-                initElementBinderDependency($el);
+                if(!$el.attr(binderName('delay'))){
+                    initElementBinderDependency($el);
+                }else{
+                    nextTick(function(){ initElementBinderDependency($el); });
+                }
             }
             , initElementBinderDependency = function(){
                 var nsCache = {}
@@ -232,6 +236,9 @@
                     $('html').attr(attrPre+'-scope','$root');
                 }
             }()
+            , nextTick = function(func){
+                setTimeout(func,1);
+            }
             ;
 
         this.selector = selector();
@@ -284,7 +291,7 @@
 
         this.bindDom = function(el){
             //optimise the speed, equals remove
-            setTimeout(function(){
+            nextTick(function(){
                 bindGlobal();
                 var $el = !el || el === document?  $('html') : $(el);
 
@@ -293,7 +300,7 @@
                 $el.find(self.selector).each(function(i){
                     initElement(this);
                 });
-            },1);
+            }.bind(this));
         };
 
         var getEventChannel = function(subscribePath){
