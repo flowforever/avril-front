@@ -241,30 +241,30 @@
             </div>
         </div>
 
-        <h2>av-each(virtual scope)</h2>
-        <div class="row well form-horizontal" av-scope="avEach" av-visible="false">
-            <table class="table table-condensed" av-stop="true">
+        <h2>av-each</h2>
+        <div class="row well form-horizontal" av-scope="avRealScope">
+            <table class="table table-condensed">
                 <thead>
-                <tr> <th av-bind="$setVal('$root.startTime',Date.now())"></th> </tr>
+                <tr> <th av-bind="$setVal('$scope.startTime',Date.now())"></th> </tr>
                 </thead>
-                <tbody av-scope="array" av-each="new Array(10)">
+                <tbody av-scope="array" av-each="$scope">
                     <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
-                    <tr av-each-item="true"> <td>lin1</td> <td>item</td> <td>item</td> </tr>
+                    <tr av-each-item="true"> <td av-bind="$scope">lin1</td> <td>item</td> <td>item</td> </tr>
                     <tr>
                         <td>last line</td> <td>item</td> <td>item</td>
                     </tr>
                 </tbody>
                 <tfoot>
-                <tr> <th> <span av-bind="Date.now() - $root.startTime"></span> ms </th> </tr>
+                <tr> <th av-scope="array" av-bind="$scope.length"></th> <th> <span av-bind="Date.now() - $scope.startTime"></span> ms </th> </tr>
                 </tfoot>
             </table>
         </div>
 
-        <h2>av-each</h2>
+        <h2>av-each(virtual scope)</h2>
         <div class="row well form-horizontal" av-scope="avEach">
             <table class="table table-condensed">
                 <thead>
-                <tr> <th av-bind="$setVal('$root.startTime',Date.now())"></th> </tr>
+                <tr> <th av-bind="$setVal('$scope.startTime',Date.now())"></th> </tr>
                 </thead>
                 <tbody av-scope="array" av-each="new Array(10)">
                 <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
@@ -272,23 +272,20 @@
                     <td>Name</td> <td>
                     <input av-bind="$scope.name"/> </td>
                     <td av-bind="$scope.name"> </td>
-                    <td av-each="hello">
-                        <div av-each-item="true">hello</div>
-                    </td>
-                    <td av-each="new Array(parseInt(3*Math.random()))">
-                        <span av-each-item="true" av-bind="new Date().getTime()"></span>
-                        <span av-each-item="true" >,</span>
-
-                    </td>
                 </tr>
                 <tr>
-                    <td>last line</td> <td>item</td> <td>item</td>
+                    <td>total</td> <td av-bind="$scope.length"></td> <td></td>
                 </tr>
                 </tbody>
                 <tfoot>
-                <tr> <th> <span av-bind="Date.now() - $root.startTime"></span> ms </th> </tr>
+                <tr><th>  </th>  <th> <span av-bind="Date.now() - $scope.startTime"></span> ms </th> </tr>
                 </tfoot>
             </table>
+        </div>
+
+        <h2>av-func</h2>
+        <div class="row well form-horizontal" av-scope="func">
+            <span></span>
         </div>
     </div>
 </body>
