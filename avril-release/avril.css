@@ -1,0 +1,10 @@
+html[av-scope='$root'] .av-visible-css,
+html.av-mvvm .av-visible-css,
+html[av-scope='$root'] .av-visible-if-css,
+html.av-mvvm .av-visible-if-css,
+html[av-scope='$root'] [av-visibleif],
+html.av-mvvm [av-visibleif],
+html[av-scope='$root'] [av-visible],
+html.av-mvvm [av-visible] {
+  display: none;
+}
