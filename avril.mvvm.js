@@ -233,7 +233,7 @@
                             mvvm.setVal(absPath, $el.val(), $el);
                         }
                     });
-                    $('html').attr(attrPre+'-scope','$root');
+                    $('html').attr(attrPre+'-scope','$root').addClass('av-mvvm');
                 }
             }()
             , nextTick = function(func){
