@@ -18,6 +18,9 @@
     ]);
 
     $(function(){
+
+        avril.mvvm.setVal('$root.basicEach',[{},{},{}])
+
         avril.mvvm.bindDom(document);
     });
 })(jQuery);

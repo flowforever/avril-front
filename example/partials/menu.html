@@ -10,7 +10,9 @@
     </div>
     <div class="navbar-collapse collapse">
         <ul class="nav navbar-nav" av-scope="$root" av-each="$root.mainMenu" av-delay="false">
-            <li av-css="{ active: $scope.url == $try($root.routeInfo.currentPage) }" av-delay="false"><a href="index.html" av-bind="text" av-attr="{ href:url }" av-delay="false"></a></li>
+            <li av-css="{ active: $scope.url == $try($root.routeInfo.currentPage) }" av-delay="false">
+                <a href="index.html" av-bind="text" av-attr="{ href:url }" av-delay="false"></a>
+            </li>
         </ul>
     </div><!--/.nav-collapse -->
 </div>
