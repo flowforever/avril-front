@@ -57,30 +57,10 @@
             </tfoot>
         </table>
     </div>
-    <h3> simple each (10000)</h3>
-    <div class="row well form-horizontal" av-stop="true" av-scope="simpleEach">
-        <table class="table table-condensed">
-            <thead>
-            <tr> <th av-bind="$setVal('$root.simpleEachTime1',Date.now())"></th> </tr>
-            </thead>
-            <tbody av-each="new Array(10000)" av-visible="false">
-            <tr> <td>first line</td> <td>item</td>
-                <td><span av-bind="$setVal('$scope.startTime',Date.now()) - $try($scope.endTime)"></span>ms</td></tr>
-            <tr av-each-item="true">
-                <td>lin1</td> <td>item</td>
-            </tr>
-            <tr>
-                <td>last line</td> <td>item</td> <td>item</td>
-            </tr>
-            </tbody>
-            <tfoot>
-            <tr><th>Total time</th>  <th
-                    av-bind="$try($scope.startTime) - $setVal('$scope.endTime',Date.now())"></th> </tr>
-            </tfoot>
-        </table>
-    </div>
+
+
     <h3>complicate each (1000 * 10)</h3>
-    <div class="row well form-horizontal" av-stop="true" av-scope="complicateEach">
+    <div class="row well form-horizontal" av-stop="true" av-visible="false" av-scope="complicateEach">
         <table class="table table-condensed">
             <thead>
             <tr> <th av-bind="$setVal('$root.complicateEachTime',Date.now())"></th> </tr>
