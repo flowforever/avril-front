@@ -152,7 +152,7 @@
                     return true;
                 }
                 $el.data('av-inited', true);
-                if(!$el.attr(binderName('delay'))){
+                if($el.attr(binderName('delay')) === 'false'){
                     initElementBinderDependency($el);
                 }else{
                     nextTick(function(){ initElementBinderDependency($el); });
@@ -238,6 +238,10 @@
             }()
             , nextTick = function(func){
                 setTimeout(func,1);
+            }
+            , addBinderClass = function($el, binder){
+                var css = binderName(binder) + '-css';
+                $el.addClass(css);
             }
             ;
 
@@ -346,22 +350,21 @@
 
         var getEachScope = function($el){
             var eachScopeName = 'each-scope'
-                , eachScopeBinderDataName = binderDataName(eachScopeName);
+                , eachScopeBinderDataName = binderDataName(eachScopeName)
+                , eachScopeBinder = $el.attr(binderName('each'));
+
+            if(eachScopeBinder && getSimpleReg().test(eachScopeBinder)){
+                return eachScopeBinder;
+            }
 
             return $el.data( eachScopeBinderDataName );
         };
 
-        this.getNs = function($el , forceNew){
-
-            var fullNsDataName = binderDataName('full-ns');
-
-            if($el.data(fullNsDataName) && !forceNew){
-            }
-
+        this.getNs = function($el){
             var fullNs = ''
                 , scopeBinderName = binderName('scope')
                 , scopeBinderDataName = binderDataName('scope')
-                , $parents = $el.parents('['+scopeBinderName+']')
+                , $parents = $el.parents('['+scopeBinderName+'],['+binderName('each')+']')
                 , eachScope = getEachScope($el)
                 , isPropVisit = function(ns){
                     return ns.indexOf('[') === 0;
@@ -488,8 +491,11 @@
 
         addBinder('each', {
             init: function($el,value, options){
-                !avril.data($el[0]) && avril.data($el[0], $el.html());
-                $el.children().attr(binderName('stop'),'true');
+                if(!avril.data($el[0])){
+                    this.getTemplateSource($el).attr(binderName('stop'),'true');
+                    avril.data($el[0], $el.html());
+                    $el.html('')
+                }
                 if(!getSimpleReg().test(options.expression)){
                     var vScope = ('$root.av_'+avril.guid()).replace(/\-/g,'');
                     var eachScope = getEachScope($el);
@@ -594,11 +600,13 @@
         });
 
         addBinder('visible',function($el,value){
+            addBinderClass($el,'visible');
             value()? $el.show() : $el.hide();
         });
 
         addBinder('visibleIf', {
             init: function($el,value){
+                addBinderClass($el,'visibleIf');
                 binders['if'].init($el, value);
                 binders.visible.init($el,value);
             }
@@ -609,15 +617,84 @@
         });
 
         addBinder('template',{
-            init: function(){
+            init: function($el, value){
+                this.render.apply(this,arguments);
+            }
+            , update: function($el, value){
+                this.render.apply(this,arguments);
+            }
+            , render: function($el, value, options){
+                var url = this.getTemplateUrl.apply(this,arguments);
+                this.getTemplate(url, function(tmplStr){
+                    $el.html(tmplStr);
+                    self.bindDom($el);
+                });
+            }
+
+
+            , isUrl : function(url){
+                return this.urlReg.test('http://test.com' + (url.indexOf('/')===0? '' : '/') + url ) || urlReg.test(url);
+            }
+            , getTemplateUrl : function($el, value, options){
+                return value() || options.expression ;
+            }
+            , getTemplate: function(url,callback){
+                var binder = this;
+                if(url.indexOf('#') === 0){
+                    return callback( $(url).html() );
+                }
+                if(this.isUrl(url)){
+                    if(this.cache[url]){
+                        return callback(this.cache[url]);
+                    }else{
+                        $.ajax({
+                            url:url
+                            , success: function(html){
+                                binder.cache[url] = html;
+                                callback(binder.cache[url])
+                            }
+                        });
+                    }
+                }
+            }
+            , cache:{
 
             }
-            , update: function(){
-
-            }
-            , getTemplate: function(callback){
-
-            }
+            // come from https://gist.github.com/dperini/729294
+            , urlReg: new RegExp(
+                    "^" +
+                    // protocol identifier
+                    "(?:(?:https?|ftp)://)" +
+                    // user:pass authentication
+                    "(?:\\S+(?::\\S*)?@)?" +
+                    "(?:" +
+                    // IP address exclusion
+                    // private & local networks
+                    "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +
+                    "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})" +
+                    "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})" +
+                    // IP address dotted notation octets
+                    // excludes loopback network 0.0.0.0
+                    // excludes reserved space >= 224.0.0.0
+                    // excludes network & broacast addresses
+                    // (first & last IP address of each class)
+                    "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])" +
+                    "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}" +
+                    "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))" +
+                    "|" +
+                    // host name
+                    "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
+                    // domain name
+                    "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
+                    // TLD identifier
+                    "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))" +
+                    ")" +
+                    // port number
+                    "(?::\\d{2,5})?" +
+                    // resource path
+                    "(?:/\\S*)?" +
+                    "$", "i"
+            )
         });
 
         addBinder('attr',function($el,value){

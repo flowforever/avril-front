@@ -44,7 +44,7 @@ module.exports = function(grunt){
         }
         , watch: {
             scripts: {
-                files: ['avril*.js'],
+                files: ['avril*.js','avril*.less'],
                 tasks: ['default'],
                 options: {
                     spawn: false
@@ -56,6 +56,16 @@ module.exports = function(grunt){
                 "files": [
                     { "expand": true,  "cwd": "release",  "src": ["release/avril*.js"], "dest": "copy", "filter": "isFile"}
                 ]
+            }
+        }
+        , less:{
+            'release':{
+                options: {
+                    paths: [""]
+                }
+                , files: {
+                    "avril-release/avril.css": "avril.less"
+                }
             }
         }
     });
@@ -72,6 +82,8 @@ module.exports = function(grunt){
 
     grunt.loadNpmTasks('grunt-contrib-watch');
 
-    grunt.registerTask('default' , ['concat', 'uglify', "copy", 'watch' ] );
+    grunt.loadNpmTasks('grunt-contrib-less');
+
+    grunt.registerTask('default' , ['concat', 'uglify', "copy", "less" ] );
 
 }
