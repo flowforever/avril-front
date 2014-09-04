@@ -2799,11 +2799,11 @@
         });
 
         addMagic('$guid', function(){
-            return 'avril_'+ avril.guid().replace(/_/g,'');
+            return 'av_guid'+ avril.guid().replace(/_/g,'');
         });
 
-        addMagic('$random', function(){
-            return Math.random();
+        addMagic('$randomScope', function(){
+            return '$root.rdm'+avril.guid().replace(/_/g,'');
         });
 
         addMagic('$parent', function(){
