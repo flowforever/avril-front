@@ -606,7 +606,7 @@
 
         addBinder('visibleIf', {
             init: function($el,value){
-                addBinderClass($el,'visibleIf');
+                addBinderClass($el,'visible-if');
                 binders['if'].init($el, value);
                 binders.visible.init($el,value);
             }

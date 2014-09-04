@@ -1,4 +1,4 @@
-﻿//#region avril.array
+//#region avril.array
 ;(function(){
 
     String.prototype.toUnicode = function () {
@@ -1543,3 +1543,1369 @@
     })
 
 })(this);
+
+/// <reference path="../_references.js" />
+
+; (function ($, avril) {
+
+    avril.namespace('avril.tools');
+
+    //#region avril.request
+    (function (avril) {
+        if (avril.request) {
+            return false;
+        }
+        avril.request = (function () {
+            function request(queryStr) {
+                var api = {
+                };
+
+                api.queryString = (function () {
+                    if (queryStr.indexOf('?') < 0) {
+                        return {};
+                    }
+                    var urlParams = {},
+                    e,
+                    d = function (s) { return decodeURIComponent(s.replace(/\+/g, " ")); },
+                    q = queryStr.substring(queryStr.indexOf('?') + 1),
+                    r = /([^&=]+)=?([^&]*)/g;
+
+                    while (e = r.exec(q))
+                        urlParams[d(e[1])] = d(e[2]);
+
+                    return urlParams;
+                })();
+
+                var setParam = function (key, value) {
+                    var hasKey = false;
+                    avril.object(api.queryString).each(function (k, v) {
+                        if (key.toLower() == k.toLower()) {
+                            hasKey = true;
+                            api.queryString[k] = value;
+                        }
+                    });
+                    if (!hasKey) {
+                        api.queryString[key] = value;
+                    }
+                    return api;
+                }
+
+                var getParam = function (key) {
+                    var val;
+                    avril.object(api.queryString).each(function (k, v) {
+                        if (key.toLower() == k.toLower()) {
+                            val = v;
+                        }
+                    });
+                    return val;
+                }
+
+                api.param = function (key, value) {
+                    if (arguments.length == 0) {
+                        return this;
+                    }
+                    if (arguments.length == 1) {
+                        if (typeof key == 'string') {
+                            return getParam(key);
+                        } else if (typeof key == 'object') {
+                            for (var k in key) {
+                                setParam(k,key[k]);
+                            }
+                        }
+                        return this;
+                    }
+                    if (arguments.length == 2) {
+                        return setParam(key, value);
+                    }
+                }
+
+                api.getUrl = function () {
+                    var url = queryStr.split('?')[0];
+
+                    if (url.indexOf('?') < 0) {
+                        url = url + '?';
+                    }
+
+                    for (var p in api.queryString) {
+                        if (api.queryString[p] != null) {
+                            url += p + '=' + encodeURI(api.queryString[p]) + "&";
+                        }
+                    }
+
+                    if (url.lastIndexOf('&') == url.length - 1) {
+                        return url.substring(0, url.lastIndexOf('&'));
+                    }
+
+                    if (url.lastIndexOf('?') == url.length - 1) {
+                        return url.substring(0, url.lastIndexOf('?'));
+                    }
+
+                    return url;
+                }
+
+                api.toString = function () {
+                    return this.getUrl();
+                }
+
+                return api;
+            }
+
+            $.extend(request, request(window.location.href));
+
+            return request;
+        })();
+    })(avril);
+    //#endregion
+
+    //#region avril.tools.loader
+    avril.namespace('avril.tools.loader');
+    avril.tools.loader.extend({
+        jsonp: function (options) {
+            options.success = options.success || function () { };
+            options.error = options.error || function () { };
+            var jsonpcallback = 'avril_' + avril.guid();
+            window[jsonpcallback] = function () {
+                script.jsonp = true;
+                if (options.success) {
+                    var obj = arguments[0];
+                    if (typeof obj == 'string') {
+                        obj = eval('(' + obj + ')')
+                    }
+                    options.success(obj);
+                }
+            };
+            var script = document.createElement('script');
+            script.type = "text/javascript";
+            script.language = "javascript";
+            script.charset = "utf-8";
+            script.async = true;
+            var head = document.getElementsByTagName('head');
+
+            function removeScript() {
+                if (typeof script.jsonp === "undefined") {
+                    options.error();
+                }
+                function clear() {
+                    try {
+                        (head ? head[0] : document).removeChild(script);
+                    } catch (E) { }
+                    try {
+                        delete window[jsonpcallback];
+                    } catch (E) { }
+                }
+                setTimeout(function () {
+                    clear();
+                }, 5000);
+            }
+
+            head[0].appendChild(script);
+
+            script.onload = script.onreadystatechange = function () {
+                if (-[1, ] || /loaded|complete/i.test(this.readyState)) {
+                    removeScript();
+                }
+            }
+
+            script.onerror = function () {
+                removeScript();
+            }
+
+            var request = avril.request(options.url);
+            if (options.data) {
+                avril.object(options.data).each(function (key, value) {
+                    if (typeof value != 'function' && typeof value != 'object') {
+                        request.param(key, encodeURIComponent(value));
+                    }
+                });
+            }
+            request.param(options.jsonp || 'jsonpcallback', jsonpcallback);
+            script.src = request.getUrl();
+        }
+        , json: function (options) {
+            if (options.url
+                && options.url.indexOf('http') == 0
+                && options.url.indexOf('http://' + document.location.host) < 0
+                && options.url.indexOf('https://' + document.location.host) < 0
+                ) {
+                this.jsonp(options);
+            } else {
+                $.ajax(options);
+            }
+        }
+        , loadScript: function (url, callback) {
+            if (!callbackCache.hasOwnProperty(url)) {
+                loadingList.push(url);
+                callbackCache[url] = callback || function () { };
+                if (loadingList.length == 1) {
+                    this._loadScript();
+                }
+            } else {
+                callback();
+            }
+        }
+        , loadStyle: function (url) {
+            var head = document.getElementsByTagName('head') || document.getElementById('body');
+            var style = document.createElement('link');
+            style.rel = 'Stylesheet';
+            style.type = 'text/css';
+            (head ? head[0] : document).appendChild(style);
+            style.href = url;
+        }
+        , template: function (url, callback) {
+            var tmpl = avril.tools.cache(url);
+            if (tmpl) {
+                callback(cache);
+            } else {
+                $.get(url, function (tmpl) {
+                    callback(tmpl);
+                    avril.tools.cache(url, tmpl);
+                });
+            }
+        }
+    });
+    //#endregion
+
+    //#region avril.tools.cache
+    avril.tools.cache = (function () {
+        var cache = window.localStorage || {};
+
+        var handler = function (key, value) {
+            switch (arguments.length) {
+                case 0: {
+                    return cache;
+                }
+                case 1: {
+                    return cache[key];
+                }
+                case 2: {
+                    return cache[key] = value;
+                }
+            }
+        };
+
+        handler.del = function (key) {
+            delete cache[key];
+        }
+
+        handler.delByPre = function (pre) {
+            for (var k in cache) {
+                if (k.indexOf(pre) == 0) {
+                    handler.del(k);
+                }
+            }
+        }
+
+        handler.list = function (key, list) {
+            function init(list) {
+                list.save = function () {
+                    handler.list(key, list);
+                }
+                return list;
+            }
+            switch (arguments.length) {
+                case 1: {
+                    var arr = [];
+                    if (handler(key)) {
+                        var list = $.parseJSON(handler(key)).data;
+                        init(list);
+                        return list;
+                    }
+                    return init(arr);
+                }
+                case 2: {
+                    if (list instanceof Array) {
+                        handler(key, $.toJSON({ data: list }));
+                        return init(list);
+                    } else {
+                        var arr = [list];
+                        handler(key, $.toJSON({ data: arr }));
+                        return init(arr);
+                    }
+                }
+            }
+        }
+
+        handler.object = function (key, obj) {
+            function init(obj) {
+                obj = obj || {};
+                obj.save = function () {
+                    handler.object(key, obj);
+                    return obj;
+                }
+                return obj;
+            }
+            switch (arguments.length) {
+                case 1: {
+                    obj = handler(key);
+                    if (!obj) {
+                        return init();
+                    }
+                    return init($.parseJSON(obj).data);
+                }
+                case 2: {
+                    handler(key, $.toJSON({ data: obj }));
+                    return init(obj);
+                }
+            }
+        }
+
+        handler.localStorage = !!window.localStorage;
+
+        return handler;
+    })();
+    //#endregion
+
+
+    //avril.tools.queue
+    avril.tools.queue = (function(){
+        var queues = {};
+        function Queue(name){
+            this.name = name;
+            var queue = [];
+            var pickNext = function(){
+                var task = queue[0];
+                if(task ){
+                    var fn =task.fn;
+                    if(!task.status){
+                        task.status = 'doing';
+                        fn( function(){
+                            task.status = 'done';
+                            queue.shift();
+                            pickNext();
+                        });
+                    }
+                }
+            };
+            this.func = function(fn){
+                queue.push({fn: wrapFn(fn) } );
+                pickNext();
+            };
+            var wrapFn = function(fn){
+                if(fn.length >0){
+                    return fn;
+                }
+                return function(cb){
+                    fn();
+                    cb();
+                }
+            }
+        }
+
+        return function(name){
+            name = name || new Date().getTime();
+            return queues[name] || (queues[name] = new Queue(name));
+        };
+
+    })();
+})($, avril);
+
+/// <reference path="../_reference.js" />
+(function ($) {
+    if (!$.validator) { return false; }
+
+    avril.namespace('avril.validator');
+
+    (function () {
+        var orgShowLabel = $.validator.prototype.showLabel;
+
+        $.validator.prototype.showLabel = function (element) {
+            var errElements = orgShowLabel.apply(this, arguments);
+            this.errorsFor(element).addClass('help-block');
+            return errElements;
+        }
+    })();
+
+    avril.validator.extend({
+        parseForm: function ($form) {
+            var self = this;
+            $form = $($form);
+            $form.each(function () {
+                $.data(this, 'validator', null);
+                $(this).validate(self.getValidObj($(this)));
+            });
+            return this;
+        }
+        , getValidObj: function ($form, validCfg) {
+            var cfg = validCfg
+            , errorCls = cfg && cfg.errCls || 'has-error'
+            , successCls = cfg && cfg.errCls || 'has-success'
+            ;
+
+            if (!cfg) {
+                cfg = {
+                    rules: {}
+                    , errorElement: 'small'
+                    , messages: {}
+                    , success: function (label) {
+                        $(label).parent().removeClass(errorCls).addClass(successCls);
+                        label.remove();
+                        label.addClass('help-block');
+                    }
+                    , errorPlacement: function (label, $el) {
+                        $($el).after(label);
+                        label.addClass('help-block');
+                        label.hide();
+                        $($el).parent().removeClass(successCls).addClass(errorCls);
+                    }
+                };
+            }
+
+            var self = this;
+            $form.find('input,select,textarea').each(function () {
+                self.parseInput($(this), cfg);
+            });
+            return cfg;
+        }
+        , parseInput: function ($input, validCfg) {
+            var self = this
+            , inputName = $input.attr('name')
+            , input = $input[0]
+            , attrs = input.attributes
+            , attrArr = []
+            , pre = 'data-val-';
+
+            if (!inputName) {
+                $input.attr('name', inputName = ('input-name-' + avril.getHash($input)));
+            }
+
+            if ($input.attr('data-val')==='true' && $input.is(':enabled')) {
+                if (!validCfg.rules[inputName]) { validCfg.rules[inputName] = {}; }
+                if (!validCfg.messages[inputName]) { validCfg.messages[inputName] = {}; }
+                for (var i = 0; i < attrs.length; i++) {
+                    attrArr.push(attrs[i]);
+                }
+                var dataValAttrs = attrArr.each(function (attr) {
+                    var name = attr.name;
+                    if (attr.name.indexOf(pre) >= 0) {
+                        var methodName = self._getOrgAttrName(name.replace(pre, ''));
+                        if (methodName.indexOf('-') < 0) {
+                            var ruleMessage = $input.attr('data-val-msg-' + methodName) || $input.attr(name);
+
+                            validCfg.messages[inputName][methodName] = ruleMessage;
+
+                            self._getRuleParam($input, name, methodName, attrArr, validCfg);
+
+                            if (!validCfg.rules[inputName][methodName]) {
+                                validCfg.rules[inputName][methodName] = true;
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        , _getOrgAttrName: function (attrName) {
+            var adapter = {
+                'equalto': 'equalTo',
+                dateiso: 'dateISO'
+            };
+
+            return adapter[attrName] || attrName;
+        }
+        , _getRuleParam: function ($input, methodPath, methodName, dataValAttrs, validCfg) {
+            var inputName = $input.attr('name');
+            var self = this;
+            dataValAttrs.each(function (attr) {
+                if (attr.name.indexOf(methodPath) == 0) {
+                    validCfg.rules[inputName][methodName] = self._paramAdapter[methodName] ? self._paramAdapter[methodName]($input.attr(attr.name), $input) : $input.attr(attr.name);
+                }
+            });
+
+
+        }
+        , _paramAdapter: {
+            required: function () {
+                return true;
+            }
+            , range: function (attr, $el) {
+                return attr.split(',').select(function () {
+                    return Number(this);
+                });
+            }
+            , rangelength: function (attr, $el) {
+                return attr.split(',').select(function () {
+                    return Number(this);
+                });
+            }
+        }
+    });
+
+    $.each(['minlength', 'maxlength', 'min', 'max'], function () {
+        avril.validator._paramAdapter[this] = function (attr, $input) {
+            return Number(arguments[0]);
+        }
+    });
+
+
+
+})(jQuery);
+/**
+ * Created by trump.wang on 2014/6/26.
+ */
+;(function($, _evalExpression){
+    var Mvvm = avril.createlib('avril.Mvvm', function(options){
+
+        var config = $.extend(this.options(), options, {
+                guid: avril.guid()
+            })
+            , self = this
+            , binders = {}
+            , expressionParsers = []
+            , magics = {
+                global: {
+
+                }
+                , binders:{
+
+                }
+            }
+            , getBinders = function($el){
+                var binder = $el.data('avBinders');
+                if(binder){
+                    return binder;
+                }
+                binder = {};
+                self.selector.split(',').each(function(selector){
+                    if( $el.is(selector)){
+                        var binderName = selector.replace(/\[|\]/g,'').replace(Mvvm.defaults.attr_pre+'-','');
+                        binder[binderName] = binders[binderName];
+                    }
+                });
+                $el.data('avBinders', binder);
+                return binder;
+            }
+            ,  _rootScopes = {
+                $root:{}
+                , $controllers: {}
+            }
+            , _expressionReg = /\$(data|scope|root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
+            , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g; }
+            , findExpressionDependency = function(){
+                var cache = {};
+                return function(expression, onFind){
+                    expression = expression.replace(/^\s+|\s+$/g,'');
+                    if(cache[expression]){
+                        return onFind? cache[expression].each(onFind) : cache[expression];
+                    }
+                    var watchers = [] , watcher;
+                    while(watcher = _expressionReg.exec(expression) ){
+                        watchers.push(watcher[0]);
+                        onFind && onFind(watcher[0]);
+                    }
+                    return cache[expression] = watchers;
+                };
+            }()
+            , binderName = Mvvm.bindingName.bind(Mvvm)
+            , binderDataName = function(bName){
+                return binderName(bName) + '-data';
+            }
+            , getScope = function(ns, $el, binder){
+                var data = avril.object( _rootScopes ).tryGetVal(ns);
+                var res = {};
+                if(data && avril.isObj(data)){
+                    $.extend(true, res, data);
+                }
+                $.extend(true, res, magics.global);
+                binder && $.extend(true, res, magics.binders[binder]);
+
+                res.$root = _rootScopes.$root
+                res.$ns = ns;
+                res.$el = $el;
+                res.$scope = res.$data = data;
+
+                return res;
+            }
+            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
+                var parsedExpressionStr = parseExpression(expression);
+                var counter = 0;
+                var subscribeDependency = function(absNs, dependenPath){
+                    self.subscribe(absNs, function(newValue,oldValue,options){
+                        if(!Mvvm.elementExists($el)){
+                            return 'removeThis';
+                        }
+                        if(dependenPath || (newValue != oldValue)){
+                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
+                        }
+                    }, {
+                        binder: binder
+                        , $el: $el
+                        , ns: ns
+                    });
+                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
+                };
+                subscribeDependency(ns);
+                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
+                    if(watchPath){
+                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
+                        subscribeDependency(absNs, watchPath);
+                        if(oldNs){
+                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
+                        }
+
+                    }
+                });
+                return watchers;
+            }
+            , parseExpression = function(expression, binder){
+                expression = expression.trim();
+                if(binder && binders[binder] && binders[binder].expressionParser){
+                    expression = binders[binder].expressionParser(expression);
+                }
+                binder && expressionParsers.binders
+                && expressionParsers.binders[binder]
+                && expressionParsers.binders[binder].each(function(parser){
+                    expression = parser(expression);
+                });
+                expressionParsers.each(function(parser){
+                    expression = parser(expression);
+                });
+                return expression;
+            }
+            , executeExpression = function(expression, $el,binder){
+                expression = parseExpression(expression,binder);
+                var ns = self.getNs($el);
+                var ctx = getScope(ns,$el,binder);
+                return Mvvm.executeExpression(expression,ctx);
+            }
+            , valueAccessor = function($el,expression,binder){
+                return function(){
+                    return executeExpression( expression , $el ,binder );
+                };
+            }
+            , selector = function(){
+                return avril.object(binders).keys().select(function(key){
+                    return '['+Mvvm.defaults.attr_pre+'-'+key+']'
+                }).join(',');
+            }
+            , binderSelector = function(name){
+                return '['+binderName(name)+']'
+            }
+            , initElement = function( el , force ) {
+                var $el = $(el);
+                if(!Mvvm.elementExists($el)){
+                    return true;
+                }
+                var stopAttrSelector = '['+binderName('stop')+']';
+                if($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length){
+                    return true;
+                }
+                if($el.data('av-inited') && !force){
+                    return true;
+                }
+                $el.data('av-inited', true);
+                if($el.attr(binderName('delay')) === 'false'){
+                    initElementBinderDependency($el);
+                }else{
+                    nextTick(function(){ initElementBinderDependency($el); });
+                }
+            }
+            , initElementBinderDependency = function(){
+                var nsCache = {}
+                    , getOldNs = function($el){
+                        return nsCache[ avril.getHash($el) ];
+                    }
+                    , cacheNs = function($el, ns){
+                        nsCache[$el] = ns;
+                    }
+                    , removeOldSubscribe = function(subscribeChanel, $el, oldNs){
+                        getEventChannel(subscribeChanel).remove(function(eventObj){
+                            if(eventObj && eventObj.data && eventObj.data.$el && eventObj.data.ns){
+                                return eventObj.data.$el.is($el) && eventObj.data.ns == oldNs;
+                            }
+                            return false;
+                        });
+                    };
+                return function($el){
+                    var binders = getBinders($el);
+                    var ns = self.getNs($el);
+                    for(var bName in binders){
+                        var expression = $el.attr(binderName(bName));
+                        var dependencies = initDependency(expression , $el , bName ,ns , getOldNs($el), removeOldSubscribe);
+                        binders[bName].init($el, valueAccessor($el,expression,bName),{
+                            expression: expression
+                            , ns: ns
+                            , dependencies: dependencies
+                        });
+                    }
+                    cacheNs($el, ns);
+                }
+            }()
+            , updateElement = function(el, updateOptions, binder){
+                var $el = $(el);
+                var binders = getBinders($el);
+                var expression = $el.attr(binderName(binder));
+                binders[binder].update($el, valueAccessor($el,expression,binder), $.extend(true,{},updateOptions,{
+                    expression: expression
+                    , binder: binder
+                    , ns: self.getNs($el)
+                }));
+            }
+            , _isExpressionTextNodeReg = /\{\{.+?\}\}/g
+            , initTextNode = function($el, onFind){
+                var arr = [];
+                $el.find('*').each(function(){
+                    for(var i= 0; i<this.childNodes.length;i++){
+                        var n = this.childNodes[i];
+                        if( n.nodeType === 3
+                            && n.nodeValue
+                            && !n.inited
+                            && _isExpressionTextNodeReg.test(n.nodeValue)
+                            ) {
+                            arr.push( this.childNodes[i] );
+                            onFind(this.childNodes[i]);
+                        }
+                    }
+                }) ;
+                return arr;
+            }
+            , bindGlobal = function(){
+                var binded = false;
+                return function(){
+                    if(binded ){
+                        return true;
+                    }
+                    binded = true;
+                    var attrPre = Mvvm.defaults.attr_pre;
+                    var mvvm = avril.mvvm;
+                    $(document).on(Mvvm.defaults.trigger_events, mvvm.selector ,function(){
+                        var $el = $(this);
+                        if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
+                            var absPath = mvvm.getAbsNs($el);
+                            mvvm.setVal(absPath, $el.val(), $el);
+                        }
+                    });
+                    $('html').attr(attrPre+'-scope','$root').addClass('av-mvvm');
+                }
+            }()
+            , nextTick = function(func){
+                setTimeout(func,1);
+            }
+            , addBinderClass = function($el, binder){
+                var css = binderName(binder) + '-css';
+                $el.addClass(css);
+            }
+            ;
+
+        this.selector = selector();
+
+        this.addBinder = function(name,binder, expressionParser){
+            if(typeof binder == 'function'){
+                binder = {
+                    init:binder
+                    , update:binder
+                }
+            }
+            if(!binder.update){
+                binder.update = function(){};
+            }
+            if(!binder.init){
+                binder.init = function(){};
+            }
+            expressionParser = expressionParser || binder.expressionParser;
+            if(avril.isFunc(expressionParser)) {
+                expressionParser = expressionParser.bind(binder);
+            }
+            binders[name] = {
+                init: binder.init.bind(binder)
+                , update: binder.update.bind(binder)
+                , expressionParser: expressionParser
+            };
+            this.selector = selector();
+        };
+
+        this.addExpressionParser = function(parser, binder){
+            if(!binder){
+                expressionParsers.push(parser);
+            }else{
+                expressionParsers.binders = expressionParsers.binders || {};
+                expressionParsers.binders[binder] = expressionParsers.binders[binder] || [];
+                expressionParsers.binders[binder].push(parser);
+            }
+        };
+
+        this.addMagic = function(name, func, binder) {
+            if(!binder){
+                magics.global[name] = func;
+            }else{
+                if( !magics.binders[binder]){
+                    magics.binders[binder] = {};
+                }
+                magics.binders[binder][name] = func;
+            }
+        };
+
+        this.bindDom = function(el){
+            //optimise the speed, equals remove
+            nextTick(function(){
+                bindGlobal();
+                var $el = !el || el === document?  $('html') : $(el);
+
+                !$el.is('html') && initElement($el);
+
+                $el.find(self.selector).each(function(i){
+                    initElement(this);
+                });
+            }.bind(this));
+        };
+
+        var getEventChannel = function(subscribePath){
+                return avril.event.get(subscribePath,self);
+            }
+            , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; };
+
+        this.setVal = function(ns, value , $sourceElement, silent) {
+            var oldValue = avril.object(_rootScopes).tryGetVal(ns);
+            if(oldValue != value){
+                if(value){
+                    if(!isNaN(value)){
+                        value = Number(value);
+                    }
+                }
+                avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/,''), value);
+                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns } ]);
+            }
+        };
+
+        this.getVal = function(ns){
+            return avril.object(_rootScopes).tryGetVal(ns);
+        };
+
+        this.subscribe = function(ns, func,options){
+            var nsArr = ns.split(',');
+            nsArr.each(function(scope){
+                var ctx = {
+                    subscribes:nsArr
+                    , subscribeStr: ns
+                    , current: scope
+                    , values: function(func){
+                        var values = this.subscribes.select(function(ns){
+                            return self.getVal(ns);
+                        });
+                        func && func.apply(this, values);
+                        return values
+                    }
+                };
+                getEventChannel(scope)(func,options,ctx);
+            });
+        };
+
+        var getEachScope = function($el){
+            var eachScopeName = 'each-scope'
+                , eachScopeBinderDataName = binderDataName(eachScopeName)
+                , eachScopeBinder = $el.attr(binderName('each'));
+
+            if(eachScopeBinder && getSimpleReg().test(eachScopeBinder)){
+                return eachScopeBinder;
+            }
+
+            return $el.data( eachScopeBinderDataName );
+        };
+
+        this.getNs = function($el){
+            var fullNs = ''
+                , scopeBinderName = binderName('scope')
+                , scopeBinderDataName = binderDataName('scope')
+                , $parents = $el.parents('['+scopeBinderName+'],['+binderName('each')+']')
+                , eachScope = getEachScope($el)
+                , isPropVisit = function(ns){
+                    return ns.indexOf('[') === 0;
+                };
+
+            if($el.attr( scopeBinderName )){
+                fullNs = $el.data(scopeBinderDataName) || $el.attr(scopeBinderName);
+            }
+
+            if(eachScope){
+                fullNs = eachScope;
+            }
+
+            if(fullNs.indexOf('$root.') == 0){
+                return fullNs;
+            }
+
+            $parents.each(function(){
+                var $parent = $(this)
+                    , eachScope = getEachScope($parent)
+                    , parentNs;
+                if($parent.attr(scopeBinderName)){
+                    parentNs = ($parent.data(scopeBinderDataName) || $parent.attr(scopeBinderName));
+                }
+
+                if(eachScope){
+                    parentNs = eachScope;
+                }
+
+                fullNs = parentNs + ( !isPropVisit(fullNs) ?  '.' : '' ) + fullNs
+
+                if(fullNs.indexOf('$root') >= 0){
+                    return false;
+                }
+            });
+
+            fullNs = fullNs.replace(/\.$/g,'');
+
+            Mvvm.devInfo($el,'scope',fullNs);
+
+            $el.data(binderName('ns'),fullNs);
+
+            return fullNs;
+        };
+
+        var resolveAbsNs = function(ns, relativeNs){
+            relativeNs = relativeNs || '';
+            if(relativeNs.indexOf('$root') == 0){
+                return relativeNs;
+            }
+            relativeNs = relativeNs.replace('$scope.','');
+
+            if(!getSimpleReg().test(relativeNs)){
+                relativeNs = '';
+            }
+            if(relativeNs.indexOf('$parent') < 0){
+                return ns +'.' + relativeNs;
+            }
+            var nsPaths = ns.split('.');
+            while(relativeNs.indexOf('$parent') == 0){
+                nsPaths.pop();
+                relativeNs = relativeNs.replace('$parent.','');
+            }
+            var pre = nsPaths.join('.');
+            return pre + (/\]$/.test(pre) ? '':'.') + relativeNs;
+        };
+
+        this.getAbsNs = function($el, binder){
+            var ns = this.getNs($el);
+            var relativeNs = $el.attr(binderName(binder || 'bind'));
+            return resolveAbsNs(ns,relativeNs);
+        };
+
+        var addBinder = this.addBinder.bind(this);
+
+        addBinder('scope',function($el,value,options){
+            var expression = options.expression;
+            if(!getSimpleReg().test(expression)){
+                expression = parseExpression(expression);
+                var executeResult = executeExpression(expression, $el.parent());
+                if(typeof  executeResult !== 'string'){
+                    throw new Error('invalid scope value.', $el.selector+':'+$el[0].outerHTML);
+                }
+                var dependencies = findExpressionDependency( expression );
+                var scopeDataName = binderDataName('scope');
+                if(dependencies && dependencies.length || !$el.data(scopeDataName) ){
+                    if(executeResult !== $el.data(scopeDataName)){
+                        $el.data(scopeDataName, executeResult);
+                        self.getNs($el,true);
+                        initElement( $el , true );
+                        return false;
+                    }
+                }
+            }
+        });
+
+        addBinder('bind',function($el,value, options){
+            if(options.sourceElement && $el.is(options.sourceElement)){
+                if($el.is('input,select,textarea')){
+                    return false;
+                }
+            }
+            var val = value();
+            if($el.is('input')) {
+                if($el.is(':checkbox') || $el.is(':radio')){
+                    $el.attr('checked' , $el.val() === val );
+                }else{
+                    $el.val(val);
+                }
+            } else if($el.is('textarea') || $el.is('select')){
+                $el.val( val );
+            } else if(!$el.attr(binderName('text')) && !$el.attr( binderName('html') )){
+                $el.text(val);
+            }
+        });
+
+        addBinder('text',function($el,value){
+            $el.text(value());
+        });
+
+        addBinder('html', function($el, value){
+            $el.html(value());
+        });
+
+        addBinder('each', {
+            init: function($el,value, options){
+                if(!avril.data($el[0])){
+                    this.getTemplateSource($el).attr(binderName('stop'),'true');
+                    avril.data($el[0], $el.html());
+                    $el.html('')
+                }
+                if(!getSimpleReg().test(options.expression)){
+                    var vScope = ('$root.av_'+avril.guid()).replace(/\-/g,'');
+                    var eachScope = getEachScope($el);
+                    if(!eachScope){
+                        $el.data( binderDataName('each-scope') , vScope  );
+                        initElement($el, true);
+                        return false;
+                    }
+                }
+                this.renderItems($el,value);
+                this.subscribeArrayEvent($el,options);
+            }
+            , update: function($el,value,options){
+                if(options.sourceElement && $el.is(options.sourceElement)){
+                    return false;
+                }
+                $el.html(avril.data($el[0]));
+                this.renderItems($el,value);
+            }
+            , subscribeArrayEvent: function($el,options){
+                var ns = self.getNs($el);
+                events = self.subscribeArray(ns);
+            }
+            , renderItems: function($el,value){
+                var items = value();
+                if(!items || !(items instanceof Array)){
+                    items = [];
+                }
+                self.setVal( self.getNs($el), items ,$el );
+                $el.html(avril.data($el[0]));
+                $el.data(binderName(this.itemTemplateDataName),null);
+                var binder = this;
+                var guid = 'guid-' + avril.guid();
+                var replaceMement = '<span>'+guid+'</span>';
+                var $start = this.getStart(this.getTemplateSource($el));
+
+                var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
+                    .toArray()
+                    .select(function(o){
+                        return o.outerHTML;
+                    }).join('');
+
+                var itemsHtml = items.select(function(item, index){
+                    return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
+                }).join('');
+
+                $start.before(replaceMement);
+
+                var currentElHtml = $el[0].innerHTML;
+
+                $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
+
+                self.bindDom($el);
+            }
+            , getStart : function($el){
+                if($el.length == 1){
+                    return $el;
+                }
+                else{
+                    return $el.last();
+                }
+            }
+            , eachItemAttrName :binderName('each-item')
+            , itemTemplateDataName: 'av-each-item-template'
+            , getTemplateSource : function($el){
+                if($el.data(binderName(this.itemTemplateDataName))){
+                    return $el.data(binderName(this.itemTemplateDataName));
+                }
+                var itemAttrName = this.eachItemAttrName;
+                var $itemTemplate = $el.children('[' + itemAttrName + '=true]');
+                if($itemTemplate.length == 0){
+                    $itemTemplate = $el.children().attr(itemAttrName,'true');
+                }
+                $el.data(binderName(this.itemTemplateDataName), $itemTemplate);
+                return $itemTemplate.hide();
+            }
+            , generateItem : function($el){
+                return this.getTemplateSource($el).clone()
+                    .removeAttr(binderName('stop')).attr(this.eachItemAttrName,"generated")
+                    .show();
+            }
+        });
+
+        addBinder('if',{
+            init:function($el,value){
+                value = value();
+                var html = $el.html();
+                avril.data($el[0], html);
+                if(!value){
+                    $el.html('');
+                }
+            }
+            , update: function($el,value){
+                var html = avril.data($el[0]);
+                if(value()){
+                    $el.html(html);
+                    self.bindDom($el);
+                }else{
+                    $el.html('');
+                }
+            }
+        });
+
+        addBinder('visible',function($el,value){
+            addBinderClass($el,'visible');
+            value()? $el.show() : $el.hide();
+        });
+
+        addBinder('visibleIf', {
+            init: function($el,value){
+                addBinderClass($el,'visible-if');
+                binders['if'].init($el, value);
+                binders.visible.init($el,value);
+            }
+            , update: function($el,value){
+                binders['if'].update($el, value);
+                binders.visible.update($el,value);
+            }
+        });
+
+        addBinder('template',{
+            init: function($el, value){
+                this.render.apply(this,arguments);
+            }
+            , update: function($el, value){
+                this.render.apply(this,arguments);
+            }
+            , render: function($el, value, options){
+                var url = this.getTemplateUrl.apply(this,arguments);
+                this.getTemplate(url, function(tmplStr){
+                    $el.html(tmplStr);
+                    self.bindDom($el);
+                });
+            }
+
+
+            , isUrl : function(url){
+                return this.urlReg.test('http://test.com' + (url.indexOf('/')===0? '' : '/') + url ) || urlReg.test(url);
+            }
+            , getTemplateUrl : function($el, value, options){
+                return value() || options.expression ;
+            }
+            , getTemplate: function(url,callback){
+                var binder = this;
+                if(url.indexOf('#') === 0){
+                    return callback( $(url).html() );
+                }
+                if(this.isUrl(url)){
+                    if(this.cache[url]){
+                        return callback(this.cache[url]);
+                    }else{
+                        $.ajax({
+                            url:url
+                            , success: function(html){
+                                binder.cache[url] = html;
+                                callback(binder.cache[url])
+                            }
+                        });
+                    }
+                }
+            }
+            , cache:{
+
+            }
+            // come from https://gist.github.com/dperini/729294
+            , urlReg: new RegExp(
+                    "^" +
+                    // protocol identifier
+                    "(?:(?:https?|ftp)://)" +
+                    // user:pass authentication
+                    "(?:\\S+(?::\\S*)?@)?" +
+                    "(?:" +
+                    // IP address exclusion
+                    // private & local networks
+                    "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +
+                    "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})" +
+                    "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})" +
+                    // IP address dotted notation octets
+                    // excludes loopback network 0.0.0.0
+                    // excludes reserved space >= 224.0.0.0
+                    // excludes network & broacast addresses
+                    // (first & last IP address of each class)
+                    "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])" +
+                    "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}" +
+                    "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))" +
+                    "|" +
+                    // host name
+                    "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
+                    // domain name
+                    "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
+                    // TLD identifier
+                    "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))" +
+                    ")" +
+                    // port number
+                    "(?::\\d{2,5})?" +
+                    // resource path
+                    "(?:/\\S*)?" +
+                    "$", "i"
+            )
+        });
+
+        addBinder('attr',function($el,value){
+            value = value();
+            $el.attr(value || {});
+        });
+
+        addBinder('style',function($el,value){
+            $el.css(value() || {});
+        });
+
+        addBinder('css',function($el,value){
+            value = value()||{};
+            for(var k in value){
+                $el[value[k]? 'addClass':'removeClass'](k);
+            }
+        });
+
+        addBinder('func', function($el, value){
+            var func = value();
+            if(avril.isFunc(func)){
+                func($el);
+            }
+        }, function(expression){
+            return expression+'.bind(this)';
+        });
+
+        var addExpressionParser = this.addExpressionParser.bind(this);
+        var addMagic = this.addMagic.bind(this);
+
+        //add try expresion parser
+        addExpressionParser(function(expression){
+            var _tryReg = /\$try\((.+?)\)/g;
+            if(_tryReg.test(expression)){
+                expression = expression.replace(_tryReg, function(match,arg){
+                    if(arg.indexOf('"') >=0 || arg.indexOf("'") >=0){
+                        return match;
+                    }else{
+                        return '$try("'+arg+'")';
+                    }
+                });
+            }
+            return expression;
+        });
+
+        addMagic('$try', function(val){
+            var $scope = this;
+            return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || '';
+        });
+
+        //add $scope or $root to simple expresion
+        addExpressionParser(function(expression){
+            if(getSimpleReg().test(expression) && !/^\d+/.test(expression)){
+                if(expression.indexOf('$root') == 0){
+                    return expression;
+                }
+                if(expression.indexOf('$scope')<0){
+                    expression = '$scope.'+expression;
+                }
+            }
+            return expression;
+        });
+
+        addMagic('$guid', function(){
+            return 'avril_'+ avril.guid().replace(/_/g,'');
+        });
+
+        addMagic('$random', function(){
+            return Math.random();
+        });
+
+        addMagic('$parent', function(){
+            var $parent = this.$el.parents(binderSelector('scope')).first();
+            return getScope(this.$ns, $parent);
+        });
+
+        addMagic('$setVal', function(relativePath, val){
+            self.setVal(resolveAbsNs(this.$ns, relativePath),val);
+            return val;
+        });
+
+        this.array = function(ns){
+            var getArray = function(){
+                var arr = self.getVal(ns);
+                if(arr instanceof  Array){ return arr; }
+                arr = [];
+                self.setVal(ns, arr);
+                return arr;
+            }
+            , outerAPI = {}
+            , innerAPI = {
+                push: function(item) {
+                    getArray().push(item);
+                }
+                , concat:function(items) {
+                    getArray().concat(items);
+                }
+                , remove: function(item) {
+                    getArray().remove(item);
+                }
+                , clear: function() {
+                    self.setVal(ns,[]);
+                }
+            };
+
+            for(var opt in innerAPI){
+                outerAPI[opt] = function(){
+                    innerAPI.apply(innerAPI,arguments);
+                    getEventChannel(optEvent(ns,opt))([]);
+                }
+            }
+
+            return outerAPI;
+        };
+
+        this.subscribeArray = function (){
+            var arrayApi = avril.object(self.array()).keys();
+            return function(ns){
+                var subscribers = {};
+                arrayApi.each(function(opt){
+                    subscribers[opt] = getEventChannel( optEvent(ns,opt) );
+                });
+                return subscribers;
+            }
+        }();
+
+        this.getRootScope = function(){
+            return $.extend(true, {}, _rootScopes.$root);
+        };
+
+    });
+
+    Mvvm.defaults = {
+        attr_pre: 'av'
+        , show_error: false
+        , trigger_events: 'change keyup'
+        , show_dev_info : false
+        , use_text_expression: false
+    };
+
+    Mvvm.bindingName = function(name){
+        return this.defaults.attr_pre+'-'+name;
+    };
+
+    Mvvm.devInfo = function ($el, name,info) {
+        this.defaults.show_dev_info && $el.attr( this.bindingName(name)+'-dev', info );
+    };
+
+    Mvvm.elementExists = function($el){
+        return $el.parents('html').length > 0 || $el.is('html');
+    };
+
+    Mvvm.executeExpression = function(expression,ctx){
+        return _evalExpression.call(ctx,expression);
+    };
+
+    avril.mvvm = avril.Mvvm();
+
+})(jQuery, function(expression){
+    with (this){
+        try
+        {
+            return eval('('+ expression +')' );
+        } catch (E){
+            if(avril.Mvvm.defaults.show_error === true){
+                throw E;
+            }
+            if(avril.Mvvm.defaults.errorHandler){
+                avril.Mvvm.defaults.errorHandler(E);
+            }
+        }
+    }
+    return '';
+});

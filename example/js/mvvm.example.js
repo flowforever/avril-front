@@ -9,6 +9,7 @@
         var currentPage = paths[ paths.length - 1 ];
         avril.mvvm.setVal('$root.routeInfo.currentPage', currentPage);
     };
+
     setCurrentMenu();
 
     avril.mvvm.setVal('$root.mainMenu',[
@@ -16,11 +17,7 @@
         , { text: 'Array', url: 'array.html'  }
     ]);
 
-
-
     $(function(){
-
-
         avril.mvvm.bindDom(document);
     });
 })(jQuery);

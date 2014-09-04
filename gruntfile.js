@@ -24,11 +24,11 @@ module.exports = function(grunt){
         , concat:{
             all:{
                 src: allJsFileArr
-                , dest: 'release/avril.all.latest.js'
+                , dest: 'avril-release/avril.all.latest.js'
             }
             , production: {
                 src: allJsFileArr,
-                dest: 'release/avril.all-<%=pkg.version%>.js'
+                dest: 'avril-release/avril.all-<%=pkg.version%>.js'
             }
         }
         , uglify: {
@@ -38,7 +38,8 @@ module.exports = function(grunt){
             },
             avril_min: {
                 files: {
-                    'release/avril.all.latest.min.js': ['release/avril.all.latest.js']
+                    'avril-release/avril.all.latest.min.js': ['avril-release/avril.all.latest.js'],
+                    'avril-release/avril.all.latest-<%=pkg.version%>.min.js': ['avril-release/avril.all.latest.js']
                 }
             }
         }
@@ -49,13 +50,6 @@ module.exports = function(grunt){
                 options: {
                     spawn: false
                 }
-            }
-        }
-        , copy: gruntConfig.copy || {
-            "main": {
-                "files": [
-                    { "expand": true,  "cwd": "release",  "src": ["release/avril*.js"], "dest": "copy", "filter": "isFile"}
-                ]
             }
         }
         , less:{
@@ -78,12 +72,10 @@ module.exports = function(grunt){
 
     grunt.loadNpmTasks('grunt-contrib-uglify');
 
-    grunt.loadNpmTasks('grunt-contrib-copy');
-
     grunt.loadNpmTasks('grunt-contrib-watch');
 
     grunt.loadNpmTasks('grunt-contrib-less');
 
-    grunt.registerTask('default' , ['concat', 'uglify', "copy", "less" ] );
+    grunt.registerTask('default' , ['concat', 'uglify', "less" ] );
 
 }
