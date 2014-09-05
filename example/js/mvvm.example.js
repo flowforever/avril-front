@@ -19,6 +19,8 @@
 
     $(function(){
 
+        avril.mvvm.setVal('$root.timeTest', new Array(20000));
+
         avril.mvvm.setVal('$root.basicEach',[{},{},{}])
 
         avril.mvvm.bindDom(document);

@@ -58,8 +58,18 @@
         </table>
     </div>
 
-    <h3 >complicate each (10000 * 10)</h3>
-    <div class="row well form-horizontal" av-scope="complicateEach">
+    <h3>time test</h3>
+    <div class="row well form-horizontal" av-scope="timeTest">
+        <p>Start at: <span av-bind="$setVal('$scope.startTime', Date.now())"></span></p>
+        <ul av-each="$scope" style="max-height: 200px; overflow-y: auto">
+            <li av-each-item="true" av-bind="new Date()"></li>
+        </ul>
+        <p> Total: <span av-bind="$scope.length"></span>, <span av-bind="Date.now() - $scope.startTime"  av-de
+                                                                lay="false"></span> </p>
+    </div>
+
+    <h3 av-stop="true" av-visible="false" >complicate each (10000 * 10)</h3>
+    <div av-stop="true" av-visible="false" class="row well form-horizontal" av-scope="complicateEach">
         <table class="table table-condensed">
             <thead>
             <tr> <th av-bind="$setVal('$scope.complicateEachTime',Date.now())"></th> </tr>

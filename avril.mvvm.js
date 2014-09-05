@@ -8,7 +8,32 @@
                 guid: avril.guid()
             })
             , self = this
+            , getHash = function(key){
+                if(key){
+                    if(key instanceof  jQuery){
+                        key = key[0];
+                    }
+                    return avril.getHash(key);
+                }
+                return key + '';
+            }
             , binders = {}
+            , getCacheProvider = function(){
+                var _c = {};
+                return function(name){
+                    return function(key,value){
+                        key = getHash(key);
+                        if(arguments.length == 1){
+                            return _c[name+'_'+key];
+                        }else if(arguments.length == 2){
+                            return _c[name+'_'+key] = value;
+                        }
+                    }
+                }
+            }()
+            , expressionCacher = getCacheProvider('expression_cache')
+            , binderCacher = getCacheProvider('expression_cache')
+            , initedElementCacher = getCacheProvider('initedElement_cache')
             , expressionParsers = []
             , magics = {
                 global: {
@@ -19,7 +44,7 @@
                 }
             }
             , getBinders = function($el){
-                var binder = $el.data('avBinders');
+                var binder = binderCacher($el);
                 if(binder){
                     return binder;
                 }
@@ -30,14 +55,14 @@
                         binder[binderName] = binders[binderName];
                     }
                 });
-                $el.data('avBinders', binder);
+                binderCacher($el,binder);
                 return binder;
             }
             ,  _rootScopes = {
                 $root:{}
                 , $controllers: {}
             }
-            , _expressionReg = /\$(data|scope|root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
+            , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
             , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g; }
             , resolveAbsNs = function(ns, relativeNs){
                 relativeNs = relativeNs || '';
@@ -95,59 +120,25 @@
 
                 return res;
             }
-            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
-                var parsedExpressionStr = parseExpression(expression);
-                var counter = 0;
-                var subscribeDependency = function(absNs, dependenPath){
-                    self.subscribe(absNs, function(newValue,oldValue,options){
-                        if(!Mvvm.elementExists($el)){
-                            return 'removeThis';
-                        }
-                        if(dependenPath || (newValue != oldValue)){
-                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
-                        }
-                    }, {
-                        binder: binder
-                        , $el: $el
-                        , ns: ns
-                    });
-                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
-                };
-                subscribeDependency(ns);
-                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
-                    if(watchPath){
-                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
-                        subscribeDependency(absNs, watchPath);
-                        if(oldNs){
-                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
-                        }
-
-                    }
-                });
-                return watchers;
-            }
-            , parseExpression =function(){
-                var cache = {};
-                return function (expression, binder){
-                    var cacheKey = expression = expression.trim();
-                    if(cache[cacheKey]){
-                        return cache[cacheKey];
-                    }
-                    if(binder && binders[binder] && binders[binder].expressionParser){
-                        expression = binders[binder].expressionParser(expression);
-                    }
-                    binder && expressionParsers.binders
-                    && expressionParsers.binders[binder]
-                    && expressionParsers.binders[binder].each(function(parser){
-                        expression = parser(expression);
-                    });
-                    expressionParsers.each(function(parser){
-                        expression = parser(expression);
-                    });
-                    cache[cacheKey] = expression;
-                    return expression;
+            , parseExpression = function (expression, binder){
+                var cacheKey = expression = expression.trim();
+                if(expressionCacher(cacheKey)){
+                    return expressionCacher(cacheKey);
                 }
-            }()
+                if(binder && binders[binder] && binders[binder].expressionParser){
+                    expression = binders[binder].expressionParser(expression);
+                }
+                binder && expressionParsers.binders
+                && expressionParsers.binders[binder]
+                && expressionParsers.binders[binder].each(function(parser){
+                    expression = parser(expression);
+                });
+                expressionParsers.each(function(parser){
+                    expression = parser(expression);
+                });
+                expressionCacher(cacheKey,expression);
+                return expression;
+            }
             , executeExpression = function(expression, $el,binder){
                 expression = parseExpression(expression,binder);
                 var ns = self.getNs($el);
@@ -177,21 +168,22 @@
                 if($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length){
                     return true;
                 }
-                if($el.data('av-inited') && !force){
+                if(initedElementCacher($el) && !force){
                     return true;
                 }
-                $el.data('av-inited', true);
-                var queue = avril.tools.queue('initElementBinderDependency');
+
+                initedElementCacher($el, true);
+
                 if($el.attr(binderName('delay')) === 'false'){
                     initElementBinderDependency($el);
                 }else{
-                    nextTick(function(){ initElementBinderDependency($el); });
+                    nextTick(function(){ Mvvm.elementExists($el) && initElementBinderDependency($el); });
                 }
             }
             , initElementBinderDependency = function(){
                 var nsCache = {}
                     , getOldNs = function($el){
-                        return nsCache[ avril.getHash($el) ];
+                        return nsCache[ getHash($el) ];
                     }
                     , cacheNs = function($el, ns){
                         nsCache[$el] = ns;
@@ -219,6 +211,40 @@
                     cacheNs($el, ns);
                 }
             }()
+            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
+                var parsedExpressionStr = parseExpression(expression);
+                var counter = 0;
+                var subscribeDependency = function(absNs, dependenPath){
+                    self.subscribe(absNs, function(newValue,oldValue,options){
+                        if(!Mvvm.elementExists($el)){
+                            if($el.is(binderDataName('each-item'))){
+
+                            }
+                            return 'removeThis';
+                        }
+                        if(dependenPath || (newValue != oldValue)){
+                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
+                        }
+                    }, {
+                        binder: binder
+                        , $el: $el
+                        , ns: ns
+                    });
+                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
+                };
+                subscribeDependency(ns);
+                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
+                    if(watchPath){
+                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
+                        subscribeDependency(absNs, watchPath);
+                        if(oldNs){
+                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
+                        }
+
+                    }
+                });
+                return watchers;
+            }
             , updateElement = function(el, updateOptions, binder){
                 var $el = $(el);
                 var binders = getBinders($el);
@@ -353,7 +379,6 @@
             }
             , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; }
             , getArrayEvent = function () {
-
             };
 
         this.setVal = function(ns, value , $sourceElement, silent) {
@@ -597,7 +622,7 @@
 
                 $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
 
-                self.bindDom($el, true);
+                self.bindDom($el, $el.attr(binderName('delay')) !== 'false' );
                 
             }
             , getStart : function($el){
@@ -867,10 +892,11 @@
         if(cache[expression]){
             return cache[expression];
         }
-        return cache[expression] = new Function(
-            'with (this){\
-                try{\
-                    return ('+expression+');\
+        try{
+            return cache[expression] = new Function(
+                    'with (this){\
+                        try{\
+                            return ('+expression+');\
                 } catch (E){\
                     if(avril.Mvvm.defaults.show_error === true){\
                         throw E;\
@@ -880,6 +906,10 @@
                     }\
                 }\
             }'
-        );
+            );
+        }catch (E){
+            return cache[expression] = function(){
+            };
+        }
     }
 }());

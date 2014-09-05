@@ -2041,14 +2041,39 @@
 /**
  * Created by trump.wang on 2014/6/26.
  */
-;(function($, _evalExpression){
+;(function($, _evalExpression, _compiledExpression){
     var Mvvm = avril.createlib('avril.Mvvm', function(options){
 
         var config = $.extend(this.options(), options, {
                 guid: avril.guid()
             })
             , self = this
+            , getHash = function(key){
+                if(key){
+                    if(key instanceof  jQuery){
+                        key = key[0];
+                    }
+                    return avril.getHash(key);
+                }
+                return key + '';
+            }
             , binders = {}
+            , getCacheProvider = function(){
+                var _c = {};
+                return function(name){
+                    return function(key,value){
+                        key = getHash(key);
+                        if(arguments.length == 1){
+                            return _c[name+'_'+key];
+                        }else if(arguments.length == 2){
+                            return _c[name+'_'+key] = value;
+                        }
+                    }
+                }
+            }()
+            , expressionCacher = getCacheProvider('expression_cache')
+            , binderCacher = getCacheProvider('expression_cache')
+            , initedElementCacher = getCacheProvider('initedElement_cache')
             , expressionParsers = []
             , magics = {
                 global: {
@@ -2059,7 +2084,7 @@
                 }
             }
             , getBinders = function($el){
-                var binder = $el.data('avBinders');
+                var binder = binderCacher($el);
                 if(binder){
                     return binder;
                 }
@@ -2070,15 +2095,36 @@
                         binder[binderName] = binders[binderName];
                     }
                 });
-                $el.data('avBinders', binder);
+                binderCacher($el,binder);
                 return binder;
             }
             ,  _rootScopes = {
                 $root:{}
                 , $controllers: {}
             }
-            , _expressionReg = /\$(data|scope|root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
+            , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
             , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g; }
+            , resolveAbsNs = function(ns, relativeNs){
+                relativeNs = relativeNs || '';
+                if(relativeNs.indexOf('$root') == 0){
+                    return relativeNs;
+                }
+                relativeNs = relativeNs.replace('$scope.','');
+
+                if(!getSimpleReg().test(relativeNs)){
+                    relativeNs = '';
+                }
+                if(relativeNs.indexOf('$parent') < 0){
+                    return ns +'.' + relativeNs;
+                }
+                var nsPaths = ns.split('.');
+                while(relativeNs.indexOf('$parent') == 0){
+                    nsPaths.pop();
+                    relativeNs = relativeNs.replace('$parent.','');
+                }
+                var pre = nsPaths.join('.');
+                return pre + (/\]$/.test(pre) ? '':'.') + relativeNs;
+            }
             , findExpressionDependency = function(){
                 var cache = {};
                 return function(expression, onFind){
@@ -2110,43 +2156,15 @@
                 res.$root = _rootScopes.$root
                 res.$ns = ns;
                 res.$el = $el;
-                res.$scope = res.$data = data;
+                res.$scope = data;
 
                 return res;
             }
-            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
-                var parsedExpressionStr = parseExpression(expression);
-                var counter = 0;
-                var subscribeDependency = function(absNs, dependenPath){
-                    self.subscribe(absNs, function(newValue,oldValue,options){
-                        if(!Mvvm.elementExists($el)){
-                            return 'removeThis';
-                        }
-                        if(dependenPath || (newValue != oldValue)){
-                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
-                        }
-                    }, {
-                        binder: binder
-                        , $el: $el
-                        , ns: ns
-                    });
-                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
-                };
-                subscribeDependency(ns);
-                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
-                    if(watchPath){
-                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
-                        subscribeDependency(absNs, watchPath);
-                        if(oldNs){
-                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
-                        }
-
-                    }
-                });
-                return watchers;
-            }
-            , parseExpression = function(expression, binder){
-                expression = expression.trim();
+            , parseExpression = function (expression, binder){
+                var cacheKey = expression = expression.trim();
+                if(expressionCacher(cacheKey)){
+                    return expressionCacher(cacheKey);
+                }
                 if(binder && binders[binder] && binders[binder].expressionParser){
                     expression = binders[binder].expressionParser(expression);
                 }
@@ -2158,12 +2176,14 @@
                 expressionParsers.each(function(parser){
                     expression = parser(expression);
                 });
+                expressionCacher(cacheKey,expression);
                 return expression;
             }
             , executeExpression = function(expression, $el,binder){
                 expression = parseExpression(expression,binder);
                 var ns = self.getNs($el);
                 var ctx = getScope(ns,$el,binder);
+
                 return Mvvm.executeExpression(expression,ctx);
             }
             , valueAccessor = function($el,expression,binder){
@@ -2188,20 +2208,22 @@
                 if($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length){
                     return true;
                 }
-                if($el.data('av-inited') && !force){
+                if(initedElementCacher($el) && !force){
                     return true;
                 }
-                $el.data('av-inited', true);
+
+                initedElementCacher($el, true);
+
                 if($el.attr(binderName('delay')) === 'false'){
                     initElementBinderDependency($el);
                 }else{
-                    nextTick(function(){ initElementBinderDependency($el); });
+                    nextTick(function(){ Mvvm.elementExists($el) && initElementBinderDependency($el); });
                 }
             }
             , initElementBinderDependency = function(){
                 var nsCache = {}
                     , getOldNs = function($el){
-                        return nsCache[ avril.getHash($el) ];
+                        return nsCache[ getHash($el) ];
                     }
                     , cacheNs = function($el, ns){
                         nsCache[$el] = ns;
@@ -2229,6 +2251,40 @@
                     cacheNs($el, ns);
                 }
             }()
+            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
+                var parsedExpressionStr = parseExpression(expression);
+                var counter = 0;
+                var subscribeDependency = function(absNs, dependenPath){
+                    self.subscribe(absNs, function(newValue,oldValue,options){
+                        if(!Mvvm.elementExists($el)){
+                            if($el.is(binderDataName('each-item'))){
+
+                            }
+                            return 'removeThis';
+                        }
+                        if(dependenPath || (newValue != oldValue)){
+                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
+                        }
+                    }, {
+                        binder: binder
+                        , $el: $el
+                        , ns: ns
+                    });
+                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
+                };
+                subscribeDependency(ns);
+                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
+                    if(watchPath){
+                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
+                        subscribeDependency(absNs, watchPath);
+                        if(oldNs){
+                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
+                        }
+
+                    }
+                });
+                return watchers;
+            }
             , updateElement = function(el, updateOptions, binder){
                 var $el = $(el);
                 var binders = getBinders($el);
@@ -2333,30 +2389,43 @@
             }
         };
 
-        this.bindDom = function(el){
+        var _bindDom = function($el){
+
+            !$el.is('html') && initElement($el);
+
+            $el.find(self.selector).each(function(i){
+                initElement(this);
+            });
+
+        }.bind(this);
+
+        this.bindDom = function(el, forceDelay){
+            bindGlobal();
+            var $el = !el || el === document?  $('html') : $(el);
+
+            if(forceDelay === true){
+                return nextTick(function(){ _bindDom($el) })
+            }else if( forceDelay === false ){
+                return _bindDom($el);
+            }
+
             //optimise the speed, equals remove
-            nextTick(function(){
-                bindGlobal();
-                var $el = !el || el === document?  $('html') : $(el);
-
-                !$el.is('html') && initElement($el);
-
-                $el.find(self.selector).each(function(i){
-                    initElement(this);
-                });
-            }.bind(this));
+            $el.attr(binderName('delay')) === 'false' ?
+                _bindDom($el) : nextTick(function(){ _bindDom($el) });
         };
 
         var getEventChannel = function(subscribePath){
                 return avril.event.get(subscribePath,self);
             }
-            , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; };
+            , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; }
+            , getArrayEvent = function () {
+            };
 
         this.setVal = function(ns, value , $sourceElement, silent) {
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
             if(oldValue != value){
                 if(value){
-                    if(!isNaN(value)){
+                    if(typeof(value) ==='string' &&  !isNaN(value)){
                         value = Number(value);
                     }
                 }
@@ -2394,7 +2463,7 @@
                 , eachScopeBinder = $el.attr(binderName('each'));
 
             if(eachScopeBinder && getSimpleReg().test(eachScopeBinder)){
-                return eachScopeBinder;
+                return eachScopeBinder.replace(/^\$scope(\.)?/,'');
             }
 
             return $el.data( eachScopeBinderDataName );
@@ -2434,7 +2503,10 @@
                     parentNs = eachScope;
                 }
 
-                fullNs = parentNs + ( !isPropVisit(fullNs) ?  '.' : '' ) + fullNs
+                if(parentNs){
+                    fullNs = parentNs + ( !isPropVisit(fullNs) && fullNs ?  '.' : '' ) + fullNs;
+                }
+
 
                 if(fullNs.indexOf('$root') >= 0){
                     return false;
@@ -2449,28 +2521,7 @@
 
             return fullNs;
         };
-
-        var resolveAbsNs = function(ns, relativeNs){
-            relativeNs = relativeNs || '';
-            if(relativeNs.indexOf('$root') == 0){
-                return relativeNs;
-            }
-            relativeNs = relativeNs.replace('$scope.','');
-
-            if(!getSimpleReg().test(relativeNs)){
-                relativeNs = '';
-            }
-            if(relativeNs.indexOf('$parent') < 0){
-                return ns +'.' + relativeNs;
-            }
-            var nsPaths = ns.split('.');
-            while(relativeNs.indexOf('$parent') == 0){
-                nsPaths.pop();
-                relativeNs = relativeNs.replace('$parent.','');
-            }
-            var pre = nsPaths.join('.');
-            return pre + (/\]$/.test(pre) ? '':'.') + relativeNs;
-        };
+        var getNs = this.getNs.bind(this);
 
         this.getAbsNs = function($el, binder){
             var ns = this.getNs($el);
@@ -2501,6 +2552,38 @@
             }
         });
 
+        addBinder('if', {
+            init:function($el,value){
+                value = value();
+                var html = $el.html();
+                avril.data($el[0], html);
+                if(!value){
+                    $el.html('');
+                }
+            }
+            , update: function($el,value){
+                var html = avril.data($el[0]);
+                if(value()){
+                    $el.html(html);
+                    self.bindDom($el);
+                }else{
+                    $el.html('');
+                }
+            }
+        });
+
+        addBinder('visibleIf', {
+            init: function($el,value){
+                addBinderClass($el,'visible-if');
+                binders['if'].init($el, value);
+                binders.visible.init($el,value);
+            }
+            , update: function($el,value){
+                binders['if'].update($el, value);
+                binders.visible.update($el,value);
+            }
+        });
+
         addBinder('bind',function($el,value, options){
             if(options.sourceElement && $el.is(options.sourceElement)){
                 if($el.is('input,select,textarea')){
@@ -2519,14 +2602,6 @@
             } else if(!$el.attr(binderName('text')) && !$el.attr( binderName('html') )){
                 $el.text(val);
             }
-        });
-
-        addBinder('text',function($el,value){
-            $el.text(value());
-        });
-
-        addBinder('html', function($el, value){
-            $el.html(value());
         });
 
         addBinder('each', {
@@ -2557,7 +2632,6 @@
             }
             , subscribeArrayEvent: function($el,options){
                 var ns = self.getNs($el);
-                events = self.subscribeArray(ns);
             }
             , renderItems: function($el,value){
                 var items = value();
@@ -2588,7 +2662,8 @@
 
                 $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
 
-                self.bindDom($el);
+                self.bindDom($el, $el.attr(binderName('delay')) !== 'false' );
+                
             }
             , getStart : function($el){
                 if($el.length == 1){
@@ -2619,41 +2694,17 @@
             }
         });
 
-        addBinder('if',{
-            init:function($el,value){
-                value = value();
-                var html = $el.html();
-                avril.data($el[0], html);
-                if(!value){
-                    $el.html('');
-                }
-            }
-            , update: function($el,value){
-                var html = avril.data($el[0]);
-                if(value()){
-                    $el.html(html);
-                    self.bindDom($el);
-                }else{
-                    $el.html('');
-                }
-            }
+        addBinder('text',function($el,value){
+            $el.text(value());
+        });
+
+        addBinder('html', function($el, value){
+            $el.html(value());
         });
 
         addBinder('visible',function($el,value){
             addBinderClass($el,'visible');
             value()? $el.show() : $el.hide();
-        });
-
-        addBinder('visibleIf', {
-            init: function($el,value){
-                addBinderClass($el,'visible-if');
-                binders['if'].init($el, value);
-                binders.visible.init($el,value);
-            }
-            , update: function($el,value){
-                binders['if'].update($el, value);
-                binders.visible.update($el,value);
-            }
         });
 
         addBinder('template',{
@@ -2762,18 +2813,29 @@
             return expression+'.bind(this)';
         });
 
+        addBinder('event', {
+            init: function($el,value){
+                var events = value();
+                if(events) {
+                    for(var e in events) {
+                        $el.on( e, events[e] );
+                    }
+                }
+            }
+        });
+
         var addExpressionParser = this.addExpressionParser.bind(this);
         var addMagic = this.addMagic.bind(this);
 
         //add try expresion parser
         addExpressionParser(function(expression){
-            var _tryReg = /\$try\((.+?)\)/g;
+            var _tryReg = /\$(try)\((.+?)\)/g;
             if(_tryReg.test(expression)){
-                expression = expression.replace(_tryReg, function(match,arg){
+                expression = expression.replace(_tryReg, function(match,method,arg){
                     if(arg.indexOf('"') >=0 || arg.indexOf("'") >=0){
                         return match;
                     }else{
-                        return '$try("'+arg+'")';
+                        return '$'+ method +'("'+arg+'")';
                     }
                 });
             }
@@ -2816,51 +2878,6 @@
             return val;
         });
 
-        this.array = function(ns){
-            var getArray = function(){
-                var arr = self.getVal(ns);
-                if(arr instanceof  Array){ return arr; }
-                arr = [];
-                self.setVal(ns, arr);
-                return arr;
-            }
-            , outerAPI = {}
-            , innerAPI = {
-                push: function(item) {
-                    getArray().push(item);
-                }
-                , concat:function(items) {
-                    getArray().concat(items);
-                }
-                , remove: function(item) {
-                    getArray().remove(item);
-                }
-                , clear: function() {
-                    self.setVal(ns,[]);
-                }
-            };
-
-            for(var opt in innerAPI){
-                outerAPI[opt] = function(){
-                    innerAPI.apply(innerAPI,arguments);
-                    getEventChannel(optEvent(ns,opt))([]);
-                }
-            }
-
-            return outerAPI;
-        };
-
-        this.subscribeArray = function (){
-            var arrayApi = avril.object(self.array()).keys();
-            return function(ns){
-                var subscribers = {};
-                arrayApi.each(function(opt){
-                    subscribers[opt] = getEventChannel( optEvent(ns,opt) );
-                });
-                return subscribers;
-            }
-        }();
-
         this.getRootScope = function(){
             return $.extend(true, {}, _rootScopes.$root);
         };
@@ -2888,7 +2905,8 @@
     };
 
     Mvvm.executeExpression = function(expression,ctx){
-        return _evalExpression.call(ctx,expression);
+        //return _evalExpression.call(ctx,expression);
+        return _compiledExpression(expression).call(ctx);
     };
 
     avril.mvvm = avril.Mvvm();
@@ -2908,4 +2926,30 @@
         }
     }
     return '';
-});
+}, function(){
+    var cache = {};
+    return function(expression) {
+        if(cache[expression]){
+            return cache[expression];
+        }
+        try{
+            return cache[expression] = new Function(
+                    'with (this){\
+                        try{\
+                            return ('+expression+');\
+                } catch (E){\
+                    if(avril.Mvvm.defaults.show_error === true){\
+                        throw E;\
+                    }\
+                    if(avril.Mvvm.defaults.errorHandler){\
+                        avril.Mvvm.defaults.errorHandler(E);\
+                    }\
+                }\
+            }'
+            );
+        }catch (E){
+            return cache[expression] = function(){
+            };
+        }
+    }
+}());
