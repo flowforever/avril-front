@@ -10,19 +10,25 @@
         avril.mvvm.setVal('$root.routeInfo.currentPage', currentPage);
     };
 
-    setCurrentMenu();
 
-    avril.mvvm.setVal('$root.mainMenu',[
+
+    var mvvm = avril.mvvm;
+
+    mvvm.setVal('$root.mainMenu',[
         { text: 'Home', url: 'index.html'  }
         , { text: 'Array', url: 'array.html'  }
     ]);
 
+    mvvm.setVal('$root.avRealScope.array',[ 1,3,4,5,88,0 ,{ aa:'hello', bb:'' } ]);
+
     $(function(){
 
-        avril.mvvm.setVal('$root.timeTest', new Array(20000));
+        setCurrentMenu();
 
-        avril.mvvm.setVal('$root.basicEach',[{},{},{}])
+        mvvm.setVal('$root.timeTest', new Array(20000));
 
-        avril.mvvm.bindDom(document);
+        mvvm.setVal('$root.basicEach',[{},{},{}])
+
+        mvvm.bindDom(document);
     });
 })(jQuery);

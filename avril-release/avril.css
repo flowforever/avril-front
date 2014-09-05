@@ -5,6 +5,8 @@ html.av-mvvm .av-visible-if-css,
 html[av-scope='$root'] [av-visibleif],
 html.av-mvvm [av-visibleif],
 html[av-scope='$root'] [av-visible],
-html.av-mvvm [av-visible] {
+html.av-mvvm [av-visible],
+html[av-scope='$root'] [av-each-item=true],
+html.av-mvvm [av-each-item=true] {
   display: none;
 }

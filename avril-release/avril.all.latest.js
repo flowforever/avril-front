@@ -2053,9 +2053,12 @@
                     if(key instanceof  jQuery){
                         key = key[0];
                     }
-                    return avril.getHash(key);
+                    return 'hs_' + avril.getHash(key);
                 }
                 return key + '';
+            }
+            , guid = function(){
+                return getHash({});
             }
             , binders = {}
             , getCacheProvider = function(){
@@ -2073,7 +2076,8 @@
             }()
             , expressionCacher = getCacheProvider('expression_cache')
             , binderCacher = getCacheProvider('expression_cache')
-            , initedElementCacher = getCacheProvider('initedElement_cache')
+            , initedElementCacher = getCacheProvider('inited_element_cache')
+            , eachTemplateCache = getCacheProvider('each_template_cache')
             , expressionParsers = []
             , magics = {
                 global: {
@@ -2088,6 +2092,13 @@
                 if(binder){
                     return binder;
                 }
+                var eachGroupId = $el.attr(binderName('each-item-group-id'));
+                if(eachGroupId){
+                    binder = binderCacher('group_'+eachGroupId);
+                    if(binder){
+                        return binder;
+                    }
+                }
                 binder = {};
                 self.selector.split(',').each(function(selector){
                     if( $el.is(selector)){
@@ -2095,13 +2106,15 @@
                         binder[binderName] = binders[binderName];
                     }
                 });
-                binderCacher($el,binder);
+                //binderCacher($el,binder);
+                binderCacher('group_'+eachGroupId,binder);
                 return binder;
             }
             ,  _rootScopes = {
                 $root:{}
                 , $controllers: {}
             }
+            , _basicValueTypeReg = /^(true|false|null|undefined)$/
             , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
             , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g; }
             , resolveAbsNs = function(ns, relativeNs){
@@ -2148,9 +2161,20 @@
                 var data = avril.object( _rootScopes ).tryGetVal(ns);
                 var res = {};
                 if(data && avril.isObj(data)){
-                    $.extend(true, res, data);
+                    if(avril.isArray(data)){
+                        data.each(function(item,index){
+                            res[index] = item;
+                        });
+                        res.length = data.length;
+                    }else{
+                        for(var k in data){
+                            res[k] = data[k];
+                        }
+                    }
                 }
+
                 $.extend(true, res, magics.global);
+
                 binder && $.extend(true, res, magics.binders[binder]);
 
                 res.$root = _rootScopes.$root
@@ -2160,8 +2184,17 @@
 
                 return res;
             }
+            , getElScope = function($el){
+                return getScope(getNs($el), $el);
+            }
             , parseExpression = function (expression, binder){
                 var cacheKey = expression = expression.trim();
+                if( _basicValueTypeReg.test(expression)){
+                    return expression;
+                }
+                if(!isNaN(expression)){
+                    return expression;
+                }
                 if(expressionCacher(cacheKey)){
                     return expressionCacher(cacheKey);
                 }
@@ -2181,7 +2214,7 @@
             }
             , executeExpression = function(expression, $el,binder){
                 expression = parseExpression(expression,binder);
-                var ns = self.getNs($el);
+                var ns = getNs($el);
                 var ctx = getScope(ns,$el,binder);
 
                 return Mvvm.executeExpression(expression,ctx);
@@ -2238,7 +2271,7 @@
                     };
                 return function($el){
                     var binders = getBinders($el);
-                    var ns = self.getNs($el);
+                    var ns = getNs($el);
                     for(var bName in binders){
                         var expression = $el.attr(binderName(bName));
                         var dependencies = initDependency(expression , $el , bName ,ns , getOldNs($el), removeOldSubscribe);
@@ -2275,7 +2308,7 @@
                 subscribeDependency(ns);
                 var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
                     if(watchPath){
-                        var absNs = resolveAbsNs(binder !== 'scope'? ns : self.getNs($el.parent()) , watchPath);
+                        var absNs = resolveAbsNs(binder !== 'scope'? ns : getNs($el.parent()) , watchPath);
                         subscribeDependency(absNs, watchPath);
                         if(oldNs){
                             removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
@@ -2292,7 +2325,7 @@
                 binders[binder].update($el, valueAccessor($el,expression,binder), $.extend(true,{},updateOptions,{
                     expression: expression
                     , binder: binder
-                    , ns: self.getNs($el)
+                    , ns: getNs($el)
                 }));
             }
             , _isExpressionTextNodeReg = /\{\{.+?\}\}/g
@@ -2313,6 +2346,19 @@
                 }) ;
                 return arr;
             }
+            , getEventChannel = function(subscribePath){
+                return avril.event.get(subscribePath,self);
+            }
+            , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; }
+            , getArrayEvent = function () {
+            }
+            , addBinderClass = function($el, binder){
+                var css = binderName(binder) + '-css';
+                $el.addClass(css);
+            }
+            , nextTick = function(func){
+                setTimeout(func,1);
+            }
             , bindGlobal = function(){
                 var binded = false;
                 return function(){
@@ -2332,13 +2378,6 @@
                     $('html').attr(attrPre+'-scope','$root').addClass('av-mvvm');
                 }
             }()
-            , nextTick = function(func){
-                setTimeout(func,1);
-            }
-            , addBinderClass = function($el, binder){
-                var css = binderName(binder) + '-css';
-                $el.addClass(css);
-            }
             ;
 
         this.selector = selector();
@@ -2409,17 +2448,14 @@
                 return _bindDom($el);
             }
 
-            //optimise the speed, equals remove
+            //optimise the speed
             $el.attr(binderName('delay')) === 'false' ?
                 _bindDom($el) : nextTick(function(){ _bindDom($el) });
         };
 
-        var getEventChannel = function(subscribePath){
-                return avril.event.get(subscribePath,self);
-            }
-            , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; }
-            , getArrayEvent = function () {
-            };
+        this.updateElScope = function($el,scopeValue){
+
+        };
 
         this.setVal = function(ns, value , $sourceElement, silent) {
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
@@ -2521,6 +2557,7 @@
 
             return fullNs;
         };
+
         var getNs = this.getNs.bind(this);
 
         this.getAbsNs = function($el, binder){
@@ -2529,7 +2566,13 @@
             return resolveAbsNs(ns,relativeNs);
         };
 
-        var addBinder = this.addBinder.bind(this);
+        this.getRootScope = function(){
+            return $.extend(true, {}, _rootScopes.$root);
+        };
+
+        var addBinder = this.addBinder.bind(this)
+            ,addExpressionParser = this.addExpressionParser.bind(this)
+            ,addMagic = this.addMagic.bind(this);
 
         addBinder('scope',function($el,value,options){
             var expression = options.expression;
@@ -2544,7 +2587,7 @@
                 if(dependencies && dependencies.length || !$el.data(scopeDataName) ){
                     if(executeResult !== $el.data(scopeDataName)){
                         $el.data(scopeDataName, executeResult);
-                        self.getNs($el,true);
+                        getNs($el,true);
                         initElement( $el , true );
                         return false;
                     }
@@ -2612,7 +2655,7 @@
                     $el.html('')
                 }
                 if(!getSimpleReg().test(options.expression)){
-                    var vScope = ('$root.av_'+avril.guid()).replace(/\-/g,'');
+                    var vScope = '$root.av_'+guid();
                     var eachScope = getEachScope($el);
                     if(!eachScope){
                         $el.data( binderDataName('each-scope') , vScope  );
@@ -2631,14 +2674,14 @@
                 this.renderItems($el,value);
             }
             , subscribeArrayEvent: function($el,options){
-                var ns = self.getNs($el);
+                var ns = getNs($el);
             }
             , renderItems: function($el,value){
                 var items = value();
                 if(!items || !(items instanceof Array)){
                     items = [];
                 }
-                self.setVal( self.getNs($el), items ,$el );
+                self.setVal( getNs($el), items ,$el );
                 $el.html(avril.data($el[0]));
                 $el.data(binderName(this.itemTemplateDataName),null);
                 var binder = this;
@@ -2684,6 +2727,14 @@
                 if($itemTemplate.length == 0){
                     $itemTemplate = $el.children().attr(itemAttrName,'true');
                 }
+                function addGroupId(){
+                    $(this).attr( binderName('each-item-group-id'), getHash(this) );
+                }
+
+                $itemTemplate.find(self.selector).each(addGroupId);
+                addGroupId.call($itemTemplate[0]);
+                $itemTemplate.filter(self.selector).each(addGroupId);
+
                 $el.data(binderName(this.itemTemplateDataName), $itemTemplate);
                 return $itemTemplate.hide();
             }
@@ -2691,6 +2742,9 @@
                 return this.getTemplateSource($el).clone()
                     .removeAttr(binderName('stop')).attr(this.eachItemAttrName,"generated")
                     .show();
+            }
+            , addItem: function(){
+
             }
         });
 
@@ -2824,12 +2878,9 @@
             }
         });
 
-        var addExpressionParser = this.addExpressionParser.bind(this);
-        var addMagic = this.addMagic.bind(this);
-
         //add try expresion parser
         addExpressionParser(function(expression){
-            var _tryReg = /\$(try)\((.+?)\)/g;
+            var _tryReg = /\$(tryGet)\((.+?)\)/g;
             if(_tryReg.test(expression)){
                 expression = expression.replace(_tryReg, function(match,method,arg){
                     if(arg.indexOf('"') >=0 || arg.indexOf("'") >=0){
@@ -2842,7 +2893,7 @@
             return expression;
         });
 
-        addMagic('$try', function(val){
+        addMagic('$tryGet', function(val){
             var $scope = this;
             return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || '';
         });
@@ -2868,19 +2919,17 @@
             return '$root.rdm'+avril.guid().replace(/_/g,'');
         });
 
-        addMagic('$parent', function(){
-            var $parent = this.$el.parents(binderSelector('scope')).first();
-            return getScope(this.$ns, $parent);
+        addMagic('$parent', function(selector){
+            var $parent = selector ? this.$el.parents(selector).first()
+                : this.$el.parents(binderSelector('scope')).first();
+
+            return getElScope($parent);
         });
 
         addMagic('$setVal', function(relativePath, val){
             self.setVal(resolveAbsNs(this.$ns, relativePath),val);
             return val;
         });
-
-        this.getRootScope = function(){
-            return $.extend(true, {}, _rootScopes.$root);
-        };
 
     });
 
@@ -2911,7 +2960,8 @@
 
     avril.mvvm = avril.Mvvm();
 
-})(jQuery, function(expression){
+})(jQuery
+, function(expression){
     with (this){
         try
         {
@@ -2926,7 +2976,8 @@
         }
     }
     return '';
-}, function(){
+}
+, function(){
     var cache = {};
     return function(expression) {
         if(cache[expression]){
@@ -2934,18 +2985,19 @@
         }
         try{
             return cache[expression] = new Function(
-                    'with (this){\
-                        try{\
-                            return ('+expression+');\
-                } catch (E){\
-                    if(avril.Mvvm.defaults.show_error === true){\
-                        throw E;\
-                    }\
-                    if(avril.Mvvm.defaults.errorHandler){\
-                        avril.Mvvm.defaults.errorHandler(E);\
-                    }\
-                }\
-            }'
+                'with (this){\n\
+                    try{\n\
+                        return '+expression+';\n\
+                    } catch (E){\n\
+                        if(avril.Mvvm.defaults.show_error === true){\n\
+                            throw E;\n\
+                        }\n\
+                        if(avril.Mvvm.defaults.errorHandler){\n\
+                            avril.Mvvm.defaults.errorHandler(E);\n\
+                        }\n\
+                        return \'\';\n\
+                    \n}\
+                \n}'
             );
         }catch (E){
             return cache[expression] = function(){

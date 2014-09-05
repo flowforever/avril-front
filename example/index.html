@@ -218,7 +218,7 @@
         </div>
 
         <h2>av-each</h2>
-        <div av-visible="false" av-bind="$setVal('$root.avRealScope.array',[ 1,3,4,5,88,0 ])"></div>
+        <div av-visible="false"></div>
         <div class="row well form-horizontal" av-scope="avRealScope">
 
             <table class="table table-condensed">
@@ -227,7 +227,7 @@
                 </thead>
                 <tbody av-scope="array" av-each="$scope">
                     <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
-                    <tr av-each-item="true"> <td av-bind="$scope">lin1</td> <td>item</td> <td>item</td> </tr>
+                    <tr av-each-item="true"  av-func="function(){ console.log($parent('tbody')) }"> <td av-bind="$scope">lin1</td> <td>item</td> <td>item</td> </tr>
                     <tr>
                         <td>last line</td> <td>item</td> <td>item</td>
                     </tr>
