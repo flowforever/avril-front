@@ -274,7 +274,6 @@
                         if(oldNs){
                             removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
                         }
-
                     }
                 });
                 return watchers;
@@ -458,9 +457,10 @@
                     }
                 }
                 , events = function(){
-                    var e = {};
-                    for(var k in api){
-                        (function(opt){
+                    var e = {
+
+                        }
+                        , addEvent = function(opt){
                             e[opt] = function(){
                                 if(typeof arguments[0] === 'function'){
                                     getOptEventChannel(ns, opt)(arguments[0], { $el: $el, ns: ns });
@@ -468,8 +468,11 @@
                                     getOptEventChannel(ns, opt)(arguments[0]);
                                 }
                             };
-                        })(k);
-
+                        };
+                    addEvent('indexChange');
+                    addEvent('lengthChange');
+                    for(var k in api){
+                        addEvent(k);
                     }
                     return e;
                 }();
@@ -700,6 +703,12 @@
                 arrayEvents.concat(function(){
 
                 });
+                arrayEvents.indexChange(function(){
+
+                });
+                arrayEvents.lengthChange(function(){
+
+                });
             }
             , renderItems: function($el,value){
                 var items = value();
@@ -710,8 +719,8 @@
                 $el.html(avril.data($el[0]));
                 $el.data(binderName(this.itemTemplateDataName),null);
                 var binder = this;
-                var guid = 'guid-' + avril.guid();
-                var replaceMement = '<span>'+guid+'</span>';
+                var guid = 'guid_' + avril.guid();
+                var replaceMement = '<i>'+guid+'</i>';
                 var $start = this.getStart(this.getTemplateSource($el));
 
                 var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
@@ -724,7 +733,8 @@
                     return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
                 }).join('');
 
-                $start.before(replaceMement);
+                $start.after(replaceMement);
+
 
                 var currentElHtml = $el[0].innerHTML;
 
@@ -915,7 +925,7 @@
             return expression;
         });
 
-        addMagic('$$tryGet', function(val){
+        addMagic('$tryGet', function(val){
             var $scope = this;
             return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || '';
         });
@@ -933,31 +943,52 @@
             return expression;
         });
 
-        addMagic('$$guid', function(){
+        addMagic('$guid', function(){
             return 'av_guid'+ avril.guid().replace(/_/g,'');
         });
 
-        addMagic('$$randomScope', function(){
+        addMagic('$randomScope', function(){
             return '$root.rdm'+avril.guid().replace(/_/g,'');
         });
 
-        addMagic('$$parent', function(selector){
+        addMagic('$parent', function(selector){
             var $parent = selector ? this.$el.parents(selector).first()
                 : this.$el.parents(binderSelector('scope')).first();
 
             return getElScope($parent);
         });
 
-        addMagic('$$setVal', function(relativePath, val){
+        addMagic('$setVal', function(relativePath, val){
             self.setVal(resolveAbsNs(this.$ns, relativePath),val);
             return val;
         });
 
-        addMagic('$$avArray', function(ns){
+        addMagic('$avArray', function(ns){
             if(arguments.length ===0 ){
                 ns = this.$ns;
             }
             return self.array(ns,this.$el);
+        });
+
+        addMagic('$index', function(ns){
+            var $el = this.$el;
+
+            while(!$el.is('[' + binderName('each-item') +']' ) && $el.length && !$el.is('body') ){
+                $el = $el.parent();
+            }
+
+            if($el.length){
+                var scopeIndex = $el.attr( binderName('scope') );
+                var groupItems = $el.parent().children('['+binderName('scope')+'="'+scopeIndex+'"]');
+                var allSiblings = $el.parent().children('['+binderName('each-item')+'="generated"]');
+                if(groupItems.length==1){
+                    return allSiblings.index($el);
+                }else if(groupItems.length>1){
+                    return allSiblings.index(groupItems.first()) / groupItems.length;
+                }
+            }
+
+            return 0;
         });
 
         this.getRootScope = function(){

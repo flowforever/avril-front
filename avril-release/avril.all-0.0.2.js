@@ -853,7 +853,7 @@
         }
 
         avril.guid = function () {
-            return  Math.random().toString().replace('.', '_') + '_' +  (new Date().getTime());
+            return  Math.random().toString(32).replace('.', '_') +  (new Date().getTime().toString(32));
         }
 
         avril.alert = function (msg) {
@@ -2185,6 +2185,7 @@
                 return res;
             }
             , getElScope = function($el){
+                $el = $($el);
                 return getScope(getNs($el), $el);
             }
             , parseExpression = function (expression, binder){
@@ -2313,7 +2314,6 @@
                         if(oldNs){
                             removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
                         }
-
                     }
                 });
                 return watchers;
@@ -2346,11 +2346,13 @@
                 }) ;
                 return arr;
             }
+            , _eventPre = 'ave_' + config.guid
             , getEventChannel = function(subscribePath){
-                return avril.event.get(subscribePath,self);
+                return avril.event.get(subscribePath,_eventPre);
             }
-            , optEvent = function(ns,opt){ return ns + '.$' + config.guid + '$' + opt; }
-            , getArrayEvent = function () {
+            , optEventName = function(ns,opt){ return ns + '.__$$__' + config.guid + '__$$__' + opt; }
+            , getOptEventChannel = function(ns, opt){
+                return getEventChannel( optEventName(ns, opt) );
             }
             , addBinderClass = function($el, binder){
                 var css = binderName(binder) + '-css';
@@ -2418,6 +2420,9 @@
         };
 
         this.addMagic = function(name, func, binder) {
+            if(!name || name.indexOf('$')!= 0 ){
+                throw "Magic method's name should start with '$'";
+            }
             if(!binder){
                 magics.global[name] = func;
             }else{
@@ -2453,10 +2458,6 @@
                 _bindDom($el) : nextTick(function(){ _bindDom($el) });
         };
 
-        this.updateElScope = function($el,scopeValue){
-
-        };
-
         this.setVal = function(ns, value , $sourceElement, silent) {
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
             if(oldValue != value){
@@ -2468,6 +2469,57 @@
                 avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/,''), value);
                 !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns } ]);
             }
+        };
+
+        this.array = function(ns, $el) {
+            var array = this.getVal(ns);
+            if(!(array instanceof  Array)){
+                array = [];
+                this.setVal(ns, array, $el);
+            }
+            var options = {
+                    sourceElement: $el
+                }
+                ,api = {
+                    add: function(item){
+                        array.push(item);
+                        getOptEventChannel(ns, 'add')([item, options]);
+                    }
+                    , remove: function(item){
+                        array.removeItem(item);
+                        getOptEventChannel(ns, 'add')([item, options]);
+                    }
+                    , concat: function(items){
+                        for(var i=0;i++;i<items.length){
+                            array.push(items[i]);
+                        }
+                        getOptEventChannel(ns,'concat')([items, options]);
+                    }
+                }
+                , events = function(){
+                    var e = {
+
+                        }
+                        , addEvent = function(opt){
+                            e[opt] = function(){
+                                if(typeof arguments[0] === 'function'){
+                                    getOptEventChannel(ns, opt)(arguments[0], { $el: $el, ns: ns });
+                                }else{
+                                    getOptEventChannel(ns, opt)(arguments[0]);
+                                }
+                            };
+                        };
+                    addEvent('indexChange');
+                    addEvent('lengthChange');
+                    for(var k in api){
+                        addEvent(k);
+                    }
+                    return e;
+                }();
+
+            api.events = events;
+
+            return api;
         };
 
         this.getVal = function(ns){
@@ -2494,6 +2546,7 @@
         };
 
         var getEachScope = function($el){
+            $el = $($el);
             var eachScopeName = 'each-scope'
                 , eachScopeBinderDataName = binderDataName(eachScopeName)
                 , eachScopeBinder = $el.attr(binderName('each'));
@@ -2557,6 +2610,8 @@
 
             return fullNs;
         };
+
+        this.getElScope = getElScope;
 
         var getNs = this.getNs.bind(this);
 
@@ -2654,7 +2709,8 @@
                     avril.data($el[0], $el.html());
                     $el.html('')
                 }
-                if(!getSimpleReg().test(options.expression)){
+                var isSimpleExpression = getSimpleReg().test(options.expression);
+                if(!isSimpleExpression){
                     var vScope = '$root.av_'+guid();
                     var eachScope = getEachScope($el);
                     if(!eachScope){
@@ -2664,7 +2720,9 @@
                     }
                 }
                 this.renderItems($el,value);
-                this.subscribeArrayEvent($el,options);
+
+                if(isSimpleExpression)
+                    this.subscribeArrayEvent($el,options);
             }
             , update: function($el,value,options){
                 if(options.sourceElement && $el.is(options.sourceElement)){
@@ -2675,6 +2733,22 @@
             }
             , subscribeArrayEvent: function($el,options){
                 var ns = getNs($el);
+                var arrayEvents = self.array(ns, $el).events;
+                arrayEvents.add(function(){
+
+                });
+                arrayEvents.remove(function(){
+
+                });
+                arrayEvents.concat(function(){
+
+                });
+                arrayEvents.indexChange(function(){
+
+                });
+                arrayEvents.lengthChange(function(){
+
+                });
             }
             , renderItems: function($el,value){
                 var items = value();
@@ -2685,8 +2759,8 @@
                 $el.html(avril.data($el[0]));
                 $el.data(binderName(this.itemTemplateDataName),null);
                 var binder = this;
-                var guid = 'guid-' + avril.guid();
-                var replaceMement = '<span>'+guid+'</span>';
+                var guid = 'guid_' + avril.guid();
+                var replaceMement = '<i>'+guid+'</i>';
                 var $start = this.getStart(this.getTemplateSource($el));
 
                 var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
@@ -2699,7 +2773,8 @@
                     return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
                 }).join('');
 
-                $start.before(replaceMement);
+                $start.after(replaceMement);
+
 
                 var currentElHtml = $el[0].innerHTML;
 
@@ -2742,9 +2817,6 @@
                 return this.getTemplateSource($el).clone()
                     .removeAttr(binderName('stop')).attr(this.eachItemAttrName,"generated")
                     .show();
-            }
-            , addItem: function(){
-
             }
         });
 
@@ -2930,6 +3002,38 @@
             self.setVal(resolveAbsNs(this.$ns, relativePath),val);
             return val;
         });
+
+        addMagic('$avArray', function(ns){
+            if(arguments.length ===0 ){
+                ns = this.$ns;
+            }
+            return self.array(ns,this.$el);
+        });
+
+        addMagic('$index', function(ns){
+            var $el = this.$el;
+
+            while(!$el.is('[' + binderName('each-item') +']' ) && $el.length && !$el.is('body') ){
+                $el = $el.parent();
+            }
+
+            if($el.length){
+                var scopeIndex = $el.attr( binderName('scope') );
+                var groupItems = $el.parent().children('['+binderName('scope')+'="'+scopeIndex+'"]');
+                var allSiblings = $el.parent().children('['+binderName('each-item')+'="generated"]');
+                if(groupItems.length==1){
+                    return allSiblings.index($el);
+                }else if(groupItems.length>1){
+                    return allSiblings.index(groupItems.first()) / groupItems.length;
+                }
+            }
+
+            return 0;
+        });
+
+        this.getRootScope = function(){
+            return $.extend(true, {}, _rootScopes.$root);
+        };
 
     });
 

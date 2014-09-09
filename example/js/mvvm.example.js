@@ -10,8 +10,6 @@
         avril.mvvm.setVal('$root.routeInfo.currentPage', currentPage);
     };
 
-
-
     var mvvm = avril.mvvm;
 
     mvvm.setVal('$root.mainMenu',[
@@ -19,7 +17,15 @@
         , { text: 'Array', url: 'array.html'  }
     ]);
 
-    mvvm.setVal('$root.avRealScope.array',[ 1,3,4,5,88,0 ,{ aa:'hello', bb:'' } ]);
+
+    var testRealArray = new Array(10).select(function(item,index){
+        return {
+            name: 'name'+index
+            , id: index
+        }
+    });
+
+    mvvm.setVal('$root.avRealScope.array',testRealArray);
 
     $(function(){
 
