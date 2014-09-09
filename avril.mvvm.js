@@ -891,6 +891,22 @@
             return val;
         });
 
+        addMagic('$addItem', function(item){
+
+        }, 'each');
+
+        addMagic('$removeItem', function(item){
+
+        }, 'each');
+
+        addMagic('$clear', function(item){
+
+        }, 'each');
+
+        this.getRootScope = function(){
+            return $.extend(true, {}, _rootScopes.$root);
+        };
+
     });
 
     Mvvm.defaults = {
