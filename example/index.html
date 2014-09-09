@@ -82,7 +82,7 @@
         </div>
 
         <h2>av-scope(dynamic)</h2>
-        <div class="row well" av-scope="$randomScope()">
+        <div class="row well" av-scope="$$randomScope()">
             <form class="form-horizontal" role="form" av-scope="form">
 
                 <div class="form-group">
@@ -223,11 +223,11 @@
 
             <table class="table table-condensed">
                 <thead>
-                <tr> <th av-bind="$setVal('$scope.startTime',Date.now())"></th> </tr>
+                <tr> <th av-bind="$$setVal('$scope.startTime',Date.now())"></th> </tr>
                 </thead>
                 <tbody av-scope="array" av-each="$scope">
                     <tr> <td>first line</td> <td>item</td> <td>item</td></tr>
-                    <tr av-each-item="true"  av-func="function(){ console.log($parent('tbody')) }"> <td av-bind="$scope">lin1</td> <td>item</td> <td>item</td> </tr>
+                    <tr av-each-item="true"> <td av-bind="$scope">lin1</td> <td>item</td> <td>item</td> </tr>
                     <tr>
                         <td>last line</td> <td>item</td> <td>item</td>
                     </tr>
@@ -243,7 +243,7 @@
         <div class="row well form-horizontal" av-scope="avEach">
             <table class="table table-condensed">
                 <thead>
-                <tr> <th av-bind="$setVal('$scope.startTime',Date.now())"></th> </tr>
+                <tr> <th av-bind="$$setVal('$scope.startTime',Date.now())"></th> </tr>
                 </thead>
                 <tbody av-scope="array" av-each="new Array(10)">
                 <tr> <td>first line</td> <td>item</td> <td>item</td></tr>

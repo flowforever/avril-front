@@ -853,7 +853,7 @@
         }
 
         avril.guid = function () {
-            return  Math.random().toString().replace('.', '_') + '_' +  (new Date().getTime());
+            return  Math.random().toString(32).replace('.', '_') +  (new Date().getTime().toString(32));
         }
 
         avril.alert = function (msg) {
