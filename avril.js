@@ -1002,6 +1002,27 @@
 
         event.events = event._event.eventList;
 
+        event.query = function (condiction){
+            var events = {};
+            if(typeof condiction === 'string'){
+                for(var e in event.events){
+                    if(e.indexOf(condiction)===0){
+                        events[e] = event.events[e];
+                    }
+                }
+            } else if(typeof  condiction === 'function'){
+                events = condiction(events.events);
+            }
+            return {
+                events: events
+                , exec: function(data){
+                    for(var e in events){
+                        avril.event._event.execute(e, null, data)
+                    }
+                }
+            };
+        };
+
         event.register = function (fnName, registerCtx) {
             if (event._event[fnName]) {
                 return event._event[fnName]

@@ -37,7 +37,7 @@
             , expressionCacher = getCacheProvider('expression_cache')
             , binderCacher = getCacheProvider('expression_cache')
             , initedElementCacher = getCacheProvider('inited_element_cache')
-            , eachTemplateCache = getCacheProvider('each_template_cache')
+            , htmlCacher = getCacheProvider('html_template_cache')
             , expressionParsers = []
             , magics = {
                 global: {
@@ -633,13 +633,13 @@
             init:function($el,value){
                 value = value();
                 var html = $el.html();
-                avril.data($el[0], html);
+                htmlCacher($el, html);
                 if(!value){
                     $el.html('');
                 }
             }
             , update: function($el,value){
-                var html = avril.data($el[0]);
+                var html = htmlCacher($el);
                 if(value()){
                     $el.html(html);
                     self.bindDom($el);
@@ -683,9 +683,9 @@
 
         addBinder('each', {
             init: function($el,value, options){
-                if(!avril.data($el[0])){
+                if(!htmlCacher($el)){
                     this.getTemplateSource($el).attr(binderName('stop'),'true');
-                    avril.data($el[0], $el.html());
+                    htmlCacher($el, $el.html());
                     $el.html('')
                 }
                 var isSimpleExpression = getSimpleReg().test(options.expression);
@@ -707,7 +707,7 @@
                 if(options.sourceElement && $el.is(options.sourceElement)){
                     return false;
                 }
-                $el.html(avril.data($el[0]));
+                $el.html(htmlCacher($el));
                 this.renderItems($el,value);
             }
             , subscribeArrayEvent: function($el,options){
@@ -732,7 +732,7 @@
                     items = [];
                 }
                 self.setVal( getNs($el), items ,$el );
-                $el.html(avril.data($el[0]));
+                $el.html(htmlCacher($el));
                 $el.data(binderName(this.itemTemplateDataName),null);
                 var binder = this;
                 var guid = 'guid_' + avril.guid();
