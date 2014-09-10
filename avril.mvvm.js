@@ -87,6 +87,11 @@
                 if(!getSimpleReg().test(relativeNs)){
                     relativeNs = '';
                 }
+
+                if(relativeNs === _optName('indexChange')){
+                    ns = ns.replace(/\[\d+\]$/,'');
+                }
+
                 if(relativeNs.indexOf('$parent') < 0){
                     return ns +'.' + relativeNs;
                 }
@@ -106,6 +111,10 @@
                         return onFind? cache[expression].each(onFind) : cache[expression];
                     }
                     var watchers = [] , watcher;
+                    var hasIndexReg = /\$index\(\s*\)/g;
+                    if( hasIndexReg.test(expression) ){
+                        watchers.push(watcher = _optName('indexChange'));
+                    }
                     while(watcher = _expressionReg.exec(expression) ){
                         watchers.push(watcher[0]);
                         onFind && onFind(watcher[0]);
@@ -310,7 +319,8 @@
             , getEventChannel = function(subscribePath){
                 return avril.event.get(subscribePath,_eventPre);
             }
-            , optEventName = function(ns,opt){ return ns + '.__$$__' + config.guid + '__$$__' + opt; }
+            , _optName = function(opt){ return '__$$__' + config.guid + '__$$__' + opt; }
+            , optEventName = function(ns,opt){ return ns + '.' + _optName(opt); }
             , getOptEventChannel = function(ns, opt){
                 return getEventChannel( optEventName(ns, opt) );
             }
@@ -440,20 +450,30 @@
             var options = {
                     sourceElement: $el
                 }
+                , triggerLengthChange = function(newLength,oldLength){
+                    getEventChannel(ns+'.length')([ newLength,oldLength, { sourceElement: $el, channel:ns } ]);
+                }
+                , triggerIndexChange = function(){
+                    events.indexChange([]);
+                }
                 ,api = {
                     add: function(item){
                         array.push(item);
                         getOptEventChannel(ns, 'add')([item, options]);
+                        triggerLengthChange(array.length, array.length - 1);
                     }
                     , remove: function(item){
                         array.removeItem(item);
                         getOptEventChannel(ns, 'add')([item, options]);
+                        triggerLengthChange(array.length, array.length + 1);
+                        triggerIndexChange();
                     }
                     , concat: function(items){
                         for(var i=0;i++;i<items.length){
                             array.push(items[i]);
                         }
                         getOptEventChannel(ns,'concat')([items, options]);
+                        triggerLengthChange(array.length, array.length - items.length);
                     }
                 }
                 , events = function(){
@@ -470,7 +490,6 @@
                             };
                         };
                     addEvent('indexChange');
-                    addEvent('lengthChange');
                     for(var k in api){
                         addEvent(k);
                     }
@@ -704,9 +723,6 @@
 
                 });
                 arrayEvents.indexChange(function(){
-
-                });
-                arrayEvents.lengthChange(function(){
 
                 });
             }
