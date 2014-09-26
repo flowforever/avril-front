@@ -725,7 +725,7 @@
                     binder.addItem($el, self.getVal(ns) );
                 });
                 arrayEvents.remove(function(){
-
+                    binder.removeItem($el, data);
                 });
                 arrayEvents.concat(function(){
 
@@ -818,6 +818,13 @@
                 self.bindDom($newItem);
             }
             , removeItem: function($el, data) {
+                var getItemEl = function(){}
+                    , changeSubscribeEvents = function () {
+
+                    };
+
+                getItemEl().remove();
+                changeSubscribeEvents();
             }
             , generateItem : function($el) {
                 return this.getTemplateSource($el).clone()
@@ -1033,7 +1040,6 @@
                     return allSiblings.index(groupItems.first()) / groupItems.length;
                 }
             }
-
             return 0;
         });
 
