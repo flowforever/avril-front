@@ -30,7 +30,7 @@
         <!-- Main component for a primary marketing message or call to action -->
         <!-- Main component for a primary marketing message or call to action -->
         <h2>av-bind</h2>
-        <div class="row well" av-scope="avBind">
+        <div av-stop="true" av-visible="false" class="row well" av-scope="avBind">
             <form class="form-horizontal" role="form" av-scope="form">
 
                 <div class="form-group">
@@ -82,7 +82,7 @@
         </div>
 
         <h2>av-scope(dynamic)</h2>
-        <div class="row well" av-scope="$randomScope()">
+        <div av-stop="true" av-visible="false" class="row well" av-scope="$randomScope()">
             <form class="form-horizontal" role="form" av-scope="form">
 
                 <div class="form-group">
@@ -134,7 +134,7 @@
         </div>
 
         <h2>av-if / av-visible / av-visibleIf</h2>
-        <div class="well row form-horizontal" av-scope="avIf">
+        <div av-stop="true" av-visible="false" class="well row form-horizontal" av-scope="avIf">
             <div class="form-group">
                 <div class="col-sm-2"><input class="form-control" av-bind="ifTrue"/></div>
                 <div class="col-sm-3">
@@ -173,7 +173,7 @@
         </div>
 
         <h2>av-css</h2>
-        <div class="row well form-horizontal" av-scope="avCss">
+        <div av-stop="true" av-visible="false" class="row well form-horizontal" av-scope="avCss">
             <div class="col-sm-2">
                 <input class="form-control" av-bind="$scope.btnLg" placeholder="btnLg"/>
             </div>
@@ -188,7 +188,7 @@
         </div>
 
         <h2>av-style</h2>
-        <div class="row well form-horizontal" av-scope="avStyle">
+        <div av-stop="true" av-visible="false" class="row well form-horizontal" av-scope="avStyle">
             <div class="col-sm-2">
                 <input class="form-control" av-bind="$scope.width" placeholder="width"/>
             </div>
@@ -204,7 +204,7 @@
         </div>
 
         <h2>av-attr</h2>
-        <div class="row well form-horizontal" av-scope="avStyle">
+        <div av-stop="true" av-visible="false" class="row well form-horizontal" av-scope="avStyle">
             <div class="col-sm-4">
                 <input class="form-control" av-bind="$scope.title" placeholder="title"/>
             </div>
@@ -219,7 +219,7 @@
 
         <h2>av-each</h2>
         <div av-visible="false"></div>
-        <div class="row well form-horizontal" av-scope="avRealScope">
+        <div av-stop="true" av-visible="false" class="row well form-horizontal" av-scope="avRealScope">
             <table class="table table-condensed">
                 <thead>
                 <tr> <th av-bind="$setVal('$scope.startTime',Date.now())"></th> </tr>
@@ -239,7 +239,7 @@
         </div>
 
         <h2>av-each(virtual scope)</h2>
-        <div class="row well form-horizontal" av-scope="avEach">
+        <div av-stop="true" av-visible="false" class="row well form-horizontal" av-scope="avEach">
             <table class="table col-sm-4 table-condensed">
                 <thead>
                 <tr> <th av-bind="$setVal('$scope.startTime',Date.now())"></th> </tr>

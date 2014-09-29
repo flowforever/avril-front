@@ -351,7 +351,6 @@
                         var $el = $(this);
                         if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
                             var absPath = mvvm.getAbsNs($el);
-                            console.log(absPath);
                             mvvm.setVal(absPath, $el.val(), $el);
                         }
                     });
@@ -831,19 +830,22 @@
                     , ns = getNs($el)
                     , changeSubscribeEvents = function () {
                         var allEvents = getSubscribeEvents();
-                        allEvents.each(function(e){
-                           if( e.indexOf(ns) === 0 ){
-                               var eventPathName = e.replace(ns,'');
+                        allEvents.each(function(currentEventPath){
+                           if( currentEventPath.indexOf(ns) === 0 ){
+                               var eventPathName = currentEventPath.replace(ns,'');
                                var exec = /^\[(\d+)\]/.exec(eventPathName)
                                    , i = exec && exec[1];
-                               if(i !== undefined){
+                               if(exec && i !== undefined){
                                    i = parseInt(i) ;
-                                   if(i >= index ){
-                                       var nextEvent = avril.event.events[ ns+'['+(i+1)+']' ];
-                                       if(nextEvent){
-                                           avril.event.events[ ns+'['+i+']' ] = nextEvent;
+                                   if(i >= index){
+                                       var nextEventPath = eventPathName.replace('['+i+']','['+(i+1)+']')
+                                           , nextEventName = _eventPre  + '_' + ns + nextEventPath
+                                           , currentEventName =  _eventPre  + '_' + currentEventPath
+                                           , nextEvents = avril.event.events[nextEventName];
+                                       if(nextEvents){
+                                           avril.event.events[currentEventName] = nextEvents;
                                        }else{
-                                           delete  avril.event.events[ ns+'['+i+']' ];
+                                           delete  avril.event.events[currentEventName];
                                        }
                                    }
                                }
@@ -858,7 +860,6 @@
                         });
                     };
                 $elToRemove.remove();
-                debugger;
                 !args._eventAdjusted && changeSubscribeEvents();
                 args._eventAdjusted = true;
                 adjustSiblingsOrder();
