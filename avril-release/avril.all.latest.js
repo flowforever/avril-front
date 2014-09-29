@@ -272,8 +272,8 @@
             return this.remove(function (value, index) { return value == elment; });
         }
 
-        instance.removeAt = function (index) {
-            return this.remove(function (value, index) { return index == index; });
+        instance.removeAt = function (i) {
+            return this.remove(function (value, index) { return index == i; });
         }
 
         instance.indexOf = function (element) {
@@ -1001,6 +1001,27 @@
         };
 
         event.events = event._event.eventList;
+
+        event.query = function (condiction){
+            var events = {};
+            if(typeof condiction === 'string'){
+                for(var e in event.events){
+                    if(e.indexOf(condiction)===0){
+                        events[e] = event.events[e];
+                    }
+                }
+            } else if(typeof  condiction === 'function'){
+                events = condiction(events.events);
+            }
+            return {
+                events: events
+                , exec: function(data){
+                    for(var e in events){
+                        avril.event._event.execute(e, null, data)
+                    }
+                }
+            };
+        };
 
         event.register = function (fnName, registerCtx) {
             if (event._event[fnName]) {
@@ -2077,7 +2098,7 @@
             , expressionCacher = getCacheProvider('expression_cache')
             , binderCacher = getCacheProvider('expression_cache')
             , initedElementCacher = getCacheProvider('inited_element_cache')
-            , eachTemplateCache = getCacheProvider('each_template_cache')
+            , htmlCacher = getCacheProvider('html_template_cache')
             , expressionParsers = []
             , magics = {
                 global: {
@@ -2127,6 +2148,11 @@
                 if(!getSimpleReg().test(relativeNs)){
                     relativeNs = '';
                 }
+
+                if(relativeNs === _optName('indexChange')){
+                    ns = ns.replace(/\[\d+\]$/,'');
+                }
+
                 if(relativeNs.indexOf('$parent') < 0){
                     return ns +'.' + relativeNs;
                 }
@@ -2146,6 +2172,10 @@
                         return onFind? cache[expression].each(onFind) : cache[expression];
                     }
                     var watchers = [] , watcher;
+                    var hasIndexReg = /\$index\(\s*\)/g;
+                    if( hasIndexReg.test(expression) ){
+                        watchers.push(watcher = _optName('indexChange'));
+                    }
                     while(watcher = _expressionReg.exec(expression) ){
                         watchers.push(watcher[0]);
                         onFind && onFind(watcher[0]);
@@ -2347,10 +2377,18 @@
                 return arr;
             }
             , _eventPre = 'ave_' + config.guid
+            , getSubscribeEvents = function(){
+                var results = [];
+                for(var k in avril.event.events){
+                    k.indexOf(_eventPre) === 0 && results.push(k.replace(_eventPre+'_','') )
+                }
+                return results;
+            }
             , getEventChannel = function(subscribePath){
                 return avril.event.get(subscribePath,_eventPre);
             }
-            , optEventName = function(ns,opt){ return ns + '.__$$__' + config.guid + '__$$__' + opt; }
+            , _optName = function(opt){ return '__$$__' + config.guid + '__$$__' + opt; }
+            , optEventName = function(ns,opt){ return ns + '.' + _optName(opt); }
             , getOptEventChannel = function(ns, opt){
                 return getEventChannel( optEventName(ns, opt) );
             }
@@ -2480,20 +2518,34 @@
             var options = {
                     sourceElement: $el
                 }
-                ,api = {
+                , triggerLengthChange = function(newLength,oldLength){
+                    getEventChannel(ns+'.length')([ newLength,oldLength, { sourceElement: $el, channel:ns } ]);
+                }
+                , triggerIndexChange = function(){
+                    events.indexChange([]);
+                }
+                , api = {
                     add: function(item){
                         array.push(item);
-                        getOptEventChannel(ns, 'add')([item, options]);
+                        getOptEventChannel(ns, 'add')([item, { guid: guid() }]);
+                        triggerLengthChange(array.length, array.length - 1);
                     }
                     , remove: function(item){
-                        array.removeItem(item);
-                        getOptEventChannel(ns, 'add')([item, options]);
+                        this.removeAt( array.indexOf(item) );
+                    }
+                    , removeAt: function(index){
+                        var item = array[index];
+                        array.removeAt(index);
+                        getOptEventChannel(ns, 'remove')([ item, index, { guid: guid() } ]);
+                        triggerLengthChange(array.length, array.length - 1);
+                        triggerIndexChange();
                     }
                     , concat: function(items){
                         for(var i=0;i++;i<items.length){
                             array.push(items[i]);
                         }
-                        getOptEventChannel(ns,'concat')([items, options]);
+                        getOptEventChannel(ns,'concat')([items, { guid: guid() }]);
+                        triggerLengthChange(array.length, array.length - items.length);
                     }
                 }
                 , events = function(){
@@ -2510,7 +2562,6 @@
                             };
                         };
                     addEvent('indexChange');
-                    addEvent('lengthChange');
                     for(var k in api){
                         addEvent(k);
                     }
@@ -2654,13 +2705,13 @@
             init:function($el,value){
                 value = value();
                 var html = $el.html();
-                avril.data($el[0], html);
+                htmlCacher($el, html);
                 if(!value){
                     $el.html('');
                 }
             }
             , update: function($el,value){
-                var html = avril.data($el[0]);
+                var html = htmlCacher($el);
                 if(value()){
                     $el.html(html);
                     self.bindDom($el);
@@ -2704,9 +2755,9 @@
 
         addBinder('each', {
             init: function($el,value, options){
-                if(!avril.data($el[0])){
+                if(!htmlCacher($el)){
                     this.getTemplateSource($el).attr(binderName('stop'),'true');
-                    avril.data($el[0], $el.html());
+                    htmlCacher($el, $el.html());
                     $el.html('')
                 }
                 var isSimpleExpression = getSimpleReg().test(options.expression);
@@ -2728,25 +2779,23 @@
                 if(options.sourceElement && $el.is(options.sourceElement)){
                     return false;
                 }
-                $el.html(avril.data($el[0]));
+                $el.html(htmlCacher($el));
                 this.renderItems($el,value);
             }
-            , subscribeArrayEvent: function($el,options){
+            , subscribeArrayEvent: function($el){
+                var binder = this;
                 var ns = getNs($el);
                 var arrayEvents = self.array(ns, $el).events;
                 arrayEvents.add(function(){
-
+                    binder.addItem($el, self.getVal(ns) );
                 });
-                arrayEvents.remove(function(){
-
+                arrayEvents.remove(function(data,index, args){
+                    binder.removeItem($el, data , index , args);
                 });
                 arrayEvents.concat(function(){
 
                 });
                 arrayEvents.indexChange(function(){
-
-                });
-                arrayEvents.lengthChange(function(){
 
                 });
             }
@@ -2756,7 +2805,7 @@
                     items = [];
                 }
                 self.setVal( getNs($el), items ,$el );
-                $el.html(avril.data($el[0]));
+                $el.html(htmlCacher($el));
                 $el.data(binderName(this.itemTemplateDataName),null);
                 var binder = this;
                 var guid = 'guid_' + avril.guid();
@@ -2793,15 +2842,20 @@
             }
             , eachItemAttrName :binderName('each-item')
             , itemTemplateDataName: 'av-each-item-template'
-            , getTemplateSource : function($el){
-                if($el.data(binderName(this.itemTemplateDataName))){
-                    return $el.data(binderName(this.itemTemplateDataName));
-                }
+            , getOrgSourceEl : function($el){
                 var itemAttrName = this.eachItemAttrName;
                 var $itemTemplate = $el.children('[' + itemAttrName + '=true]');
                 if($itemTemplate.length == 0){
                     $itemTemplate = $el.children().attr(itemAttrName,'true');
                 }
+                return $itemTemplate;
+            }
+            , getTemplateSource : function($el) {
+                if($el.data(binderName(this.itemTemplateDataName))){
+                    return $el.data(binderName(this.itemTemplateDataName));
+                }
+                var itemAttrName = this.eachItemAttrName;
+                var $itemTemplate = this.getOrgSourceEl($el);
                 function addGroupId(){
                     $(this).attr( binderName('each-item-group-id'), getHash(this) );
                 }
@@ -2813,7 +2867,65 @@
                 $el.data(binderName(this.itemTemplateDataName), $itemTemplate);
                 return $itemTemplate.hide();
             }
-            , generateItem : function($el){
+            , getLastEl: function($el) {
+                var itemAttrName = this.eachItemAttrName;
+                var $itemEl = $el.find('['+itemAttrName+'="generated"]');
+                if($itemEl.length==0){
+                    return this.getOrgSourceEl($el);
+                }
+                return $itemEl.length==1? $itemEl : $itemEl.last() ;
+            }
+            , getItemByDataIndex: function($el, index){
+                return $el.children( '['+ this.eachItemAttrName + '="generated"][av-scope="['+index+']"]' );
+            }
+            , addItem: function($el, array) {
+                var $lastEl = this.getLastEl($el);
+                var $newItem = this.generateItem($el);
+                $newItem.attr( binderName('scope') , '['+(array.length -1) +']' );
+                $lastEl.after($newItem);
+                self.bindDom($newItem);
+            }
+            , removeItem: function($el, data,index, args) {
+                var $elToRemove = this.getItemByDataIndex($el, index)
+                    , $siblings = $elToRemove.nextAll( '['+ this.eachItemAttrName + '="generated"][av-scope!="['+index+']"]' )
+                    , ns = getNs($el)
+                    , changeSubscribeEvents = function () {
+                        var allEvents = getSubscribeEvents();
+                        allEvents.each(function(currentEventPath){
+                           if( currentEventPath.indexOf(ns) === 0 ){
+                               var eventPathName = currentEventPath.replace(ns,'');
+                               var exec = /^\[(\d+)\]/.exec(eventPathName)
+                                   , i = exec && exec[1];
+                               if(exec && i !== undefined){
+                                   i = parseInt(i) ;
+                                   if(i >= index){
+                                       var nextEventPath = eventPathName.replace('['+i+']','['+(i+1)+']')
+                                           , nextEventName = _eventPre  + '_' + ns + nextEventPath
+                                           , currentEventName =  _eventPre  + '_' + currentEventPath
+                                           , nextEvents = avril.event.events[nextEventName];
+                                       if(nextEvents){
+                                           avril.event.events[currentEventName] = nextEvents;
+                                       }else{
+                                           delete  avril.event.events[currentEventName];
+                                       }
+                                   }
+                               }
+                           }
+                        });
+                    }
+                    , adjustSiblingsOrder = function(){
+                        $siblings.each(function(){
+                            var $s = $(this);
+                            var sIndex = /\[(\d+)\]/.exec( $s.attr( binderName('scope') ) )[1] - 1;
+                            $s.attr( binderName('scope') , '['+ sIndex +']');
+                        });
+                    };
+                $elToRemove.remove();
+                !args._eventAdjusted && changeSubscribeEvents();
+                args._eventAdjusted = true;
+                adjustSiblingsOrder();
+            }
+            , generateItem : function($el) {
                 return this.getTemplateSource($el).clone()
                     .removeAttr(binderName('stop')).attr(this.eachItemAttrName,"generated")
                     .show();
@@ -3027,8 +3139,11 @@
                     return allSiblings.index(groupItems.first()) / groupItems.length;
                 }
             }
-
             return 0;
+        });
+
+        addMagic('$clone', function(obj){
+            return $.extend(true, {}, obj);
         });
 
         this.getRootScope = function(){
