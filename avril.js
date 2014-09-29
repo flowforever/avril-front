@@ -272,8 +272,8 @@
             return this.remove(function (value, index) { return value == elment; });
         }
 
-        instance.removeAt = function (index) {
-            return this.remove(function (value, index) { return index == index; });
+        instance.removeAt = function (i) {
+            return this.remove(function (value, index) { return index == i; });
         }
 
         instance.indexOf = function (element) {

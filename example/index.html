@@ -277,7 +277,9 @@
                             <input av-bind="$scope.name"/>
                         </td>
                         <td>
-                            <a av-event="click:function(){ $parent('tbody').$avArray().remove($scope) }">remove</a>
+                            <a href="javascript:;"
+                               av-event="{ click:function(){ $parent('tbody').$avArray().removeAt( $index() )  } }"
+                                    >remove</a>
                         </td>
                     </tr>
                     </tbody>
@@ -309,7 +311,8 @@
                             <input av-bind="$scope.name"/>
                         </td>
                         <td>
-                            <a av-event="click:function(){ $parent('tbody').$avArray().remove($scope) }">remove</a>
+                            <a href="javascript:;"
+                               av-event="{click:function(){  $parent('tbody').$avArray().removeAt( $index() )  }}">remove</a>
                         </td>
                     </tr>
                     </tbody>

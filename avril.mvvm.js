@@ -316,6 +316,13 @@
                 return arr;
             }
             , _eventPre = 'ave_' + config.guid
+            , getSubscribeEvents = function(){
+                var results = [];
+                for(var k in avril.event.events){
+                    k.indexOf(_eventPre) === 0 && results.push(k.replace(_eventPre+'_','') )
+                }
+                return results;
+            }
             , getEventChannel = function(subscribePath){
                 return avril.event.get(subscribePath,_eventPre);
             }
@@ -344,6 +351,7 @@
                         var $el = $(this);
                         if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
                             var absPath = mvvm.getAbsNs($el);
+                            console.log(absPath);
                             mvvm.setVal(absPath, $el.val(), $el);
                         }
                     });
@@ -459,19 +467,16 @@
                 , api = {
                     add: function(item){
                         array.push(item);
-                        getOptEventChannel(ns, 'add')([item, options]);
+                        getOptEventChannel(ns, 'add')([item, { guid: guid() }]);
                         triggerLengthChange(array.length, array.length - 1);
                     }
                     , remove: function(item){
-                        array.removeItem(item);
-                        getOptEventChannel(ns, 'remove')([item, options]);
-                        triggerLengthChange(array.length, array.length - 1);
-                        triggerIndexChange();
+                        this.removeAt( array.indexOf(item) );
                     }
                     , removeAt: function(index){
                         var item = array[index];
-                        this.removeAt(index);
-                        getOptEventChannel(ns, 'remove')([item, options]);
+                        array.removeAt(index);
+                        getOptEventChannel(ns, 'remove')([ item, index, { guid: guid() } ]);
                         triggerLengthChange(array.length, array.length - 1);
                         triggerIndexChange();
                     }
@@ -479,7 +484,7 @@
                         for(var i=0;i++;i<items.length){
                             array.push(items[i]);
                         }
-                        getOptEventChannel(ns,'concat')([items, options]);
+                        getOptEventChannel(ns,'concat')([items, { guid: guid() }]);
                         triggerLengthChange(array.length, array.length - items.length);
                     }
                 }
@@ -717,15 +722,15 @@
                 $el.html(htmlCacher($el));
                 this.renderItems($el,value);
             }
-            , subscribeArrayEvent: function($el,options){
+            , subscribeArrayEvent: function($el){
                 var binder = this;
                 var ns = getNs($el);
                 var arrayEvents = self.array(ns, $el).events;
                 arrayEvents.add(function(){
                     binder.addItem($el, self.getVal(ns) );
                 });
-                arrayEvents.remove(function(){
-                    binder.removeItem($el, data);
+                arrayEvents.remove(function(data,index, args){
+                    binder.removeItem($el, data , index , args);
                 });
                 arrayEvents.concat(function(){
 
@@ -810,6 +815,9 @@
                 }
                 return $itemEl.length==1? $itemEl : $itemEl.last() ;
             }
+            , getItemByDataIndex: function($el, index){
+                return $el.children( '['+ this.eachItemAttrName + '="generated"][av-scope="['+index+']"]' );
+            }
             , addItem: function($el, array) {
                 var $lastEl = this.getLastEl($el);
                 var $newItem = this.generateItem($el);
@@ -817,14 +825,43 @@
                 $lastEl.after($newItem);
                 self.bindDom($newItem);
             }
-            , removeItem: function($el, data) {
-                var getItemEl = function(){}
+            , removeItem: function($el, data,index, args) {
+                var $elToRemove = this.getItemByDataIndex($el, index)
+                    , $siblings = $elToRemove.nextAll( '['+ this.eachItemAttrName + '="generated"][av-scope!="['+index+']"]' )
+                    , ns = getNs($el)
                     , changeSubscribeEvents = function () {
-
+                        var allEvents = getSubscribeEvents();
+                        allEvents.each(function(e){
+                           if( e.indexOf(ns) === 0 ){
+                               var eventPathName = e.replace(ns,'');
+                               var exec = /^\[(\d+)\]/.exec(eventPathName)
+                                   , i = exec && exec[1];
+                               if(i !== undefined){
+                                   i = parseInt(i) ;
+                                   if(i >= index ){
+                                       var nextEvent = avril.event.events[ ns+'['+(i+1)+']' ];
+                                       if(nextEvent){
+                                           avril.event.events[ ns+'['+i+']' ] = nextEvent;
+                                       }else{
+                                           delete  avril.event.events[ ns+'['+i+']' ];
+                                       }
+                                   }
+                               }
+                           }
+                        });
+                    }
+                    , adjustSiblingsOrder = function(){
+                        $siblings.each(function(){
+                            var $s = $(this);
+                            var sIndex = /\[(\d+)\]/.exec( $s.attr( binderName('scope') ) )[1] - 1;
+                            $s.attr( binderName('scope') , '['+ sIndex +']');
+                        });
                     };
-
-                getItemEl().remove();
-                changeSubscribeEvents();
+                $elToRemove.remove();
+                debugger;
+                !args._eventAdjusted && changeSubscribeEvents();
+                args._eventAdjusted = true;
+                adjustSiblingsOrder();
             }
             , generateItem : function($el) {
                 return this.getTemplateSource($el).clone()
