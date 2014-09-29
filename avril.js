@@ -128,208 +128,6 @@
         }
     }
 
-    function arrayEx(org) {
-
-        var instance = {};
-
-        function isFunc(func) {
-            return typeof func == 'function';
-        }
-
-        function parseFuncLambda(func) {
-            return isFunc(func) ?
-                func :
-                (isLambda(func) ? func.lambda() : function () {
-
-                });
-        }
-
-        function sort(instance, field, dirc) {
-            dirc = dirc || 1;
-            return instance.sort(function (x, y) {
-                if (field) {
-                    if (x[field] > y[field]) {
-                        return dirc;
-                    } else {
-                        return -1 * dirc;
-                    }
-                } else {
-                    if (x > y) {
-                        return dirc;
-                    } else {
-                        return -1 * dirc;
-                    }
-                }
-            });
-        }
-
-        instance.asc = function (field) {
-            return sort(this, field, 1);
-        }
-
-        instance.desc = function (field) {
-            return sort(this, field, -1);
-        }
-
-        instance.each = function (func) {
-            func = parseFuncLambda(func);
-            for (var i = 0; i < this.length; i++) {
-                if (func(this[i], i) == false) {
-                    break;
-                }
-            }
-            return this;
-        }
-
-        instance.where = function (func) {
-            func = parseFuncLambda(func);
-            var results = [];
-            this.each(function (value, index) {
-                if (func(value, index) == true) {
-                    results.push(value);
-                }
-            });
-            return results;
-        }
-
-        instance.first = function (func) {
-            func = parseFuncLambda(func);
-            if (this.length == 0) {
-                return null;
-            }
-            if (func) {
-                return this.where(func)[0];
-            } else {
-                return this[0];
-            }
-        }
-
-        instance.last = function (func) {
-            func = parseFuncLambda(func);
-            if (this.length == 0) {
-                return null;
-            }
-            if (isFunc(func)) {
-                return this.where(func).last();
-            } else {
-                return this[this.length - 1];
-            }
-        }
-
-        instance.groupBy = function (func) {
-            func = parseFuncLambda(func);
-            if (func) {
-                var obj = {};
-                this.each(function (item, index) {
-                    var key = func(item, index) + '';
-                    if (!obj[key]) {
-                        obj[key] = [];
-                    }
-                    obj[key].push(item);
-                });
-                return obj;
-            }
-            return this;
-        }
-
-        instance.take = function (num) {
-            var result = [];
-            for (var i = 0; i < num; i++) {
-                result.push(this[i]);
-            }
-            return result;
-        }
-
-        instance.skip = function (num) {
-            var result = [];
-            for (var i = num; i < this.length; i++) {
-                result.push(this[i]);
-            }
-            return result;
-        }
-
-        instance.select = function (func) {
-            func = parseFuncLambda(func);
-            var results = [];
-            this.each(function (value, index) {
-                results.push(func.call(value, value, index));
-            });
-            return results;
-        }
-
-        instance.remove = function (func) {
-            func = parseFuncLambda(func);
-            var toRemove = [];
-            this.each(function (val, index) {
-                if (func(val, index)) { toRemove.push(index); }
-            });
-            var arr = this;
-            toRemove.reverse().each(function (val) { arr.splice(val, 1) });
-            return arr;
-        }
-
-        instance.removeElement = function (elment) {
-            return this.remove(function (value, index) { return value == elment; });
-        }
-
-        instance.removeAt = function (i) {
-            return this.remove(function (value, index) { return index == i; });
-        }
-
-        instance.indexOf = function (element) {
-            var i = -1;
-            this.each(function (value, index) {
-                if (value == element) {
-                    i = index;
-                    return false;
-                }
-            });
-
-            return i;
-        }
-
-        instance.contain = function (element, elementIsFunction) {
-            if (true != elementIsFunction && typeof element == 'function') {
-                return this.where(element).length > 0;
-            }
-            return this.indexOf(element) >= 0;
-        }
-
-        var isFunc = function (obj) {
-            return typeof obj == 'function';
-        }
-
-        instance.distinc = function (compareFunc) {
-            var arr = [];
-            this.each(function (value, index) {
-                if (isFunc(compareFunc)
-                    && compareFunc(value, index) != false) {
-                    arr.push(value);
-                } else if (!isFunc(compareFunc)
-                    && !arr.contain(value)) {
-                    arr.push(value);
-                }
-            });
-            return arr;
-        }
-
-        instance.clone = function () {
-            var arr = [];
-            for (var i = 0; i < this.length; i++) {
-                arr.push(this[i]);
-            }
-            return arr;
-        }
-
-        for (var k in instance) {
-            org[k] = org[k] || instance[k];
-        }
-
-        return org;
-    }
-
-    arrayEx(Array.prototype);
-
     if (!Function.prototype.bind) {
         Function.prototype.bind = function (oThis) {
             if (typeof this !== "function") {
@@ -856,21 +654,6 @@
             return  Math.random().toString(32).replace('.', '_') +  (new Date().getTime().toString(32));
         }
 
-        avril.alert = function (msg) {
-            alert(msg);
-        }
-
-        avril.confirm = function (msg, callback, title) {
-            //Disable confirm if the message is null.
-            if (msg == undefined || msg == '') {
-                callback(true);
-            }
-            else
-                callback(confirm(msg));
-        }
-
-        var objReference = [];
-
         var __getHash = (function(){
             var counter = 0;
             return function (obj) {
@@ -970,7 +753,7 @@
 
                 var toRemove = [];
 
-                this.eventList[name].each(function (fnObj) {
+                avril.array( this.eventList[name] ).each(function (fnObj) {
                     var execResult , ctx = fnObj.ctx || context;
                     if (data && data.length >= 0) {
                         var args = [];
@@ -989,8 +772,8 @@
                     }
                 });
 
-                toRemove.each(function(fnObj){
-                    self.eventList[name].removeElement(fnObj);
+                avril.array( toRemove ).each(function(fnObj){
+                    avril.array( self.eventList[name] ).removeElement(fnObj);
                 });
 
                 return result;
@@ -1001,27 +784,6 @@
         };
 
         event.events = event._event.eventList;
-
-        event.query = function (condiction){
-            var events = {};
-            if(typeof condiction === 'string'){
-                for(var e in event.events){
-                    if(e.indexOf(condiction)===0){
-                        events[e] = event.events[e];
-                    }
-                }
-            } else if(typeof  condiction === 'function'){
-                events = condiction(events.events);
-            }
-            return {
-                events: events
-                , exec: function(data){
-                    for(var e in events){
-                        avril.event._event.execute(e, null, data)
-                    }
-                }
-            };
-        };
 
         event.register = function (fnName, registerCtx) {
             if (event._event[fnName]) {
@@ -1153,6 +915,253 @@
 
     })(avril.$, avril);
 
+    //#endregion
+
+    //#region avril.array
+    (function (){
+        var isFunc = function (obj) {
+            return typeof obj == 'function';
+        };
+
+        var isLambda = function(str) {
+            return str && typeof (str) == 'string' && str.indexOf('=>') > 0;
+        };
+
+        var parseFuncLambda = function (func) {
+            return isFunc(func) ?
+                func :
+                (isLambda(func) ? toLambdaFunc(func) : function () {
+
+                });
+        };
+
+        var toLambdaFunc = function(str, ctx){
+            if (isLambda(str)) {
+                var lambdaKey = str.indexOf('=>')
+                    , args = str.substring(0, lambdaKey)
+                    , funcContent = str.substring(lambdaKey + 2)
+                    , funcStr = 'function';
+                if (args.indexOf('(') < 0) {
+                    funcStr += ' (' + args + ')';
+                } else {
+                    funcStr += args;
+                }
+
+                if (funcContent.indexOf('{') >= 0) {
+                    if (funcContent.indexOf(';') >= 0) {
+                        funcStr += funcContent;
+                    } else {
+                        funcStr += '{ return ' + funcContent + '; }';
+                    }
+                } else {
+                    funcStr += '{ return ' + funcContent + '; }'
+                }
+
+                if (ctx) {
+                    with (ctx) {
+                        return eval('(' + funcStr + ')');
+                    }
+                }
+
+                return eval('(' + funcStr + ')');
+            }
+        }
+
+        var sort = function(instance, field, direction) {
+            direction = direction || 1;
+            return instance.sort(function (x, y) {
+                if (field) {
+                    if (x[field] > y[field]) {
+                        return direction;
+                    } else {
+                        return -1 * direction;
+                    }
+                } else {
+                    if (x > y) {
+                        return direction;
+                    } else {
+                        return -1 * direction;
+                    }
+                }
+            });
+        };
+
+        var avArray = function(arr) {
+
+            var self = this;
+
+            self.asc = function (field) {
+                return sort(this, field, 1);
+            }
+
+            self.desc = function (field) {
+                return sort(this, field, -1);
+            }
+
+            self.each = function (func) {
+                func = parseFuncLambda(func);
+                for (var i = 0; i < arr.length; i++) {
+                    if (func(arr[i], i) == false) {
+                        break;
+                    }
+                }
+                return this;
+            }
+
+            self.where = function (func) {
+                func = parseFuncLambda(func);
+                var results = [];
+                this.each(function (value, index) {
+                    if (func(value, index) == true) {
+                        results.push(value);
+                    }
+                });
+                arr = results;
+                return this;
+            }
+
+            self.first = function (func) {
+                func = parseFuncLambda(func);
+                if (arr.length == 0) {
+                    return null;
+                }
+                if (func) {
+                    return this.where(func).value()[0];
+                } else {
+                    return arr[0];
+                }
+            }
+
+            self.last = function (func) {
+                func = parseFuncLambda(func);
+                if (arr.length == 0) {
+                    return null;
+                }
+                if (isFunc(func)) {
+                    return this.where(func).value()[0];
+                } else {
+                    return arr[this.length - 1];
+                }
+            }
+
+            self.groupBy = function (func) {
+                func = parseFuncLambda(func);
+                if (func) {
+                    var obj = {};
+                    this.each(function (item, index) {
+                        var key = func(item, index) + '';
+                        if (!obj[key]) {
+                            obj[key] = [];
+                        }
+                        obj[key].push(item);
+                    });
+                    return obj;
+                }
+                return this;
+            }
+
+            self.take = function (num) {
+                var result = [];
+                for (var i = 0; i < num; i++) {
+                    result.push(arr[i]);
+                }
+                arr = result;
+                return this;
+            }
+
+            self.skip = function (num) {
+                var result = [];
+                for (var i = num; i < arr.length; i++) {
+                    result.push(this[i]);
+                }
+                arr = result;
+                return this;
+            }
+
+            self.select = function (func) {
+                func = parseFuncLambda(func);
+                var results = [];
+                this.each(function (value, index) {
+                    results.push(func.call(value, value, index));
+                });
+                arr = results;
+                return this;
+            }
+
+            self.remove = function (func) {
+                func = parseFuncLambda(func);
+                var toRemove = [];
+                this.each(function (val, index) {
+                    if (func(val, index)) { toRemove.push(index); }
+                });
+
+                toRemove = toRemove.reverse();
+
+                for(var i = 0; i < toRemove.length;i++){
+                    arr.splice( toRemove[i] , 1)
+                }
+
+                return this;
+            }
+
+            self.removeElement = function (elment) {
+                return this.remove(function (value) { return value == elment; });
+            }
+
+            self.removeAt = function (i) {
+                return this.remove(function (value, index) { return index == i; });
+            }
+
+            self.indexOf = function (element) {
+                var i = -1;
+                this.each(function (value, index) {
+                    if (value == element) {
+                        i = index;
+                        return false;
+                    }
+                });
+                return i;
+            }
+
+            self.contain = function (element, elementIsFunction) {
+                if (true != elementIsFunction && typeof element == 'function') {
+                    return this.where(element).length > 0;
+                }
+                return this.indexOf(element) >= 0;
+            }
+
+            self.distinc = function (compareFunc) {
+                arr = [];
+                this.each(function (value, index) {
+                    if (isFunc(compareFunc)
+                        && compareFunc(value, index) != false) {
+                        arr.push(value);
+                    } else if (!isFunc(compareFunc)
+                        && !arr.contain(value)) {
+                        arr.push(value);
+                    }
+                });
+                return this;
+            }
+
+            self.clone = function () {
+                var results = [];
+                for (var i = 0; i < this.length; i++) {
+                    results.push(this[i]);
+                }
+                arr = results;
+                return this;
+            }
+
+            self.value = function(){
+                return arr;
+            }
+        }
+
+        avril.array = function(arr){
+            return new avArray(arr);
+        }
+    })();
     //#endregion
 
     //#region avril.createlib & avril.extendlib
@@ -1557,10 +1566,12 @@
         window.console.log = function () { };
     }
 
-    'log,warn,error'.split(',').each(function(action){
+    avril.array('log,warn,error'.split(',')).each(function(action){
         avril[action] = function(msg){
             console[action] && console[action](msg);
         }
-    })
+    });
+
+
 
 })(this);

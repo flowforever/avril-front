@@ -27,4 +27,67 @@ describe('avril.js', function(){
             expect(hashStrA).not.equal(hashStrB);
         })
     });
+
+    describe('#array()', function(){
+       it('.each 5 times', function(){
+           var arr = [1,2,3,4,5];
+           var results = [];
+
+           avril.array(arr).each(function(item){
+               results.push(item);
+           });
+
+           expect(results.length).equal( arr.length );
+
+           expect(results[2]).equal(arr[2]);
+
+       }) ;
+
+        it('.where should only have 3 results', function(){
+            var arr = [1,2,3,4,5];
+            var results = avril.array(arr).where(function(item, index){
+                return item >= 3;
+            }).value();
+
+            expect(results.length).equal(3);
+            expect(results[0]).equal(3);
+        });
+
+        it('.remove should only have 3 results', function(){
+            var arr = [1,2,3,4,5];
+
+            var results = avril.array(arr).remove(function(item, index){
+                return item < 3;
+            }).value();
+
+            expect( avril.getHash(arr) ).equal( avril.getHash(results));
+
+            expect(results.length).equal(3);
+
+            expect(results[2]).equal(5);
+
+        });
+
+        it('lambada .where should only have 3 results', function(){
+            var arr = [1,2,3,4,5];
+
+            var results = avril.array(arr).where('o => o >= 3;').value();
+
+            expect(results.length).equal(3);
+            expect(results[0]).equal(3);
+        });
+
+        it('lambada .remove should only have 3 results', function(){
+            var arr = [1,2,3,4,5];
+
+            var results = avril.array(arr).remove('o => o<3').value();
+
+            expect( avril.getHash(arr) ).equal( avril.getHash(results));
+
+            expect(results.length).equal(3);
+
+            expect(results[2]).equal(5);
+
+        });
+    });
 });

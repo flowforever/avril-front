@@ -18,7 +18,7 @@
     ]);
 
 
-    var testRealArray = new Array(10).select(function(item,index){
+    var testRealArray = avril.array( new Array(10) ).select(function(item,index){
         return {
             name: 'name'+index
             , id: index

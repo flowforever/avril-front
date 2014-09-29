@@ -60,7 +60,7 @@
                     }
                 }
                 binder = {};
-                self.selector.split(',').each(function(selector){
+                avril.array( self.selector.split(',') ).each(function(selector){
                     if( $el.is(selector)){
                         var binderName = selector.replace(/\[|\]/g,'').replace(Mvvm.defaults.attr_pre+'-','');
                         binder[binderName] = binders[binderName];
@@ -108,7 +108,7 @@
                 return function(expression, onFind){
                     expression = expression.replace(/^\s+|\s+$/g,'');
                     if(cache[expression]){
-                        return onFind? cache[expression].each(onFind) : cache[expression];
+                        return onFind? avril.array( cache[expression] ).each(onFind) : cache[expression];
                     }
                     var watchers = [] , watcher;
                     var hasIndexReg = /\$index\(\s*\)/g;
@@ -131,7 +131,7 @@
                 var res = {};
                 if(data && avril.isObj(data)){
                     if(avril.isArray(data)){
-                        data.each(function(item,index){
+                        avril.array( data ).each(function(item,index){
                             res[index] = item;
                         });
                         res.length = data.length;
@@ -173,10 +173,10 @@
                 }
                 binder && expressionParsers.binders
                 && expressionParsers.binders[binder]
-                && expressionParsers.binders[binder].each(function(parser){
+                && avril.array( expressionParsers.binders[binder] ).each(function(parser){
                     expression = parser(expression);
                 });
-                expressionParsers.each(function(parser){
+                avril.array( expressionParsers ).each(function(parser){
                     expression = parser(expression);
                 });
                 expressionCacher(cacheKey,expression);
@@ -195,9 +195,9 @@
                 };
             }
             , selector = function(){
-                return avril.object(binders).keys().select(function(key){
+                return avril.array( avril.object(binders).keys() ).select(function(key){
                     return '['+Mvvm.defaults.attr_pre+'-'+key+']'
-                }).join(',');
+                }).value().join(',');
             }
             , binderSelector = function(name){
                 return '['+binderName(name)+']'
@@ -232,7 +232,7 @@
                         nsCache[$el] = ns;
                     }
                     , removeOldSubscribe = function(subscribeChanel, $el, oldNs){
-                        getEventChannel(subscribeChanel).remove(function(eventObj){
+                        avril.array( getEventChannel(subscribeChanel) ).remove(function(eventObj){
                             if(eventObj && eventObj.data && eventObj.data.$el && eventObj.data.ns){
                                 return eventObj.data.$el.is($el) && eventObj.data.ns == oldNs;
                             }
@@ -474,7 +474,7 @@
                     }
                     , removeAt: function(index){
                         var item = array[index];
-                        array.removeAt(index);
+                        avril.array( array ).removeAt(index);
                         getOptEventChannel(ns, 'remove')([ item, index, { guid: guid() } ]);
                         triggerLengthChange(array.length, array.length - 1);
                         triggerIndexChange();
@@ -518,15 +518,15 @@
 
         this.subscribe = function(ns, func,options){
             var nsArr = ns.split(',');
-            nsArr.each(function(scope){
+            avril.array( nsArr ).each(function(scope){
                 var ctx = {
                     subscribes:nsArr
                     , subscribeStr: ns
                     , current: scope
                     , values: function(func){
-                        var values = this.subscribes.select(function(ns){
+                        var values = avril.array( this.subscribes ).select(function(ns){
                             return self.getVal(ns);
-                        });
+                        }).value();
                         func && func.apply(this, values);
                         return values
                     }
@@ -751,15 +751,15 @@
                 var replaceMement = '<i>'+guid+'</i>';
                 var $start = this.getStart(this.getTemplateSource($el));
 
-                var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
-                    .toArray()
-                    .select(function(o){
+                var itemTemplateHtml = avril.array(
+                        binder.generateItem($el).attr(binderName('scope'),'[{scope}]').toArray()
+                    ).select(function(o){
                         return o.outerHTML;
-                    }).join('');
+                    }).value().join('');
 
-                var itemsHtml = items.select(function(item, index){
+                var itemsHtml = avril.array( items ).select(function(item, index){
                     return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
-                }).join('');
+                }).value().join('');
 
                 $start.after(replaceMement);
 
@@ -830,7 +830,7 @@
                     , ns = getNs($el)
                     , changeSubscribeEvents = function () {
                         var allEvents = getSubscribeEvents();
-                        allEvents.each(function(currentEventPath){
+                        avril.array( allEvents ).each(function(currentEventPath){
                            if( currentEventPath.indexOf(ns) === 0 ){
                                var eventPathName = currentEventPath.replace(ns,'');
                                var exec = /^\[(\d+)\]/.exec(eventPathName)
