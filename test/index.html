@@ -3,9 +3,32 @@
     <meta charset="utf-8">
     <title>avril-front test</title>
     <link rel="stylesheet" href="../ref/mocha/mocha.css" />
+
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="../avril-release/avril.css">
+
+    <link rel="stylesheet" href="../ref/bootstrap/css/bootstrap.css">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="../ref/bootstrap/css/bootstrap-theme.min.css">
+    <style>
+        #mocha-stats .progress{
+            height: auto;
+        }
+    </style>
 </head>
 <body>
-    <div id="mocha"></div>
+    <div class="container">
+        <div id="mocha"></div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <h2>Array Test</h2>
+            <ul></ul>
+        </div>
+    </div>
+
     <script src="../ref/jquery-1.11.1.js"></script>
     <script src="../ref/mocha/mocha.js"></script>
     <script src="../ref/mocha/chai.js"></script>

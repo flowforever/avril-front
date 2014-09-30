@@ -217,7 +217,7 @@
 
                 initedElementCacher($el, true);
 
-                if($el.attr(binderName('delay')) === 'false'){
+                if(Mvvm.defaults.force_delay === false || $el.attr(binderName('delay')) === 'false'){
                     initElementBinderDependency($el);
                 }else{
                     nextTick(function(){ Mvvm.elementExists($el) && initElementBinderDependency($el); });
@@ -431,7 +431,7 @@
             }
 
             //optimise the speed
-            $el.attr(binderName('delay')) === 'false' ?
+            Mvvm.defaults.force_delay === false || $el.attr(binderName('delay')) === 'false' ?
                 _bindDom($el) : nextTick(function(){ _bindDom($el) });
         };
 
@@ -1097,6 +1097,7 @@
         , trigger_events: 'change keyup'
         , show_dev_info : false
         , use_text_expression: false
+        , force_delay: true
     };
 
     Mvvm.bindingName = function(name){
