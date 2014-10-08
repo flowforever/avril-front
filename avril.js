@@ -434,52 +434,19 @@
                 }
             },
             setVal: function (obj, pStr, val) {
-                if (pStr.indexOf('.') > 0) {
-                    var firstProp = pStr.substring(0, pStr.indexOf("."));
-
-                    var lastProp = pStr.substring(pStr.indexOf('.') + 1);
-
-                    if (firstProp.indexOf('[') >= 0) {
-                        var index = firstProp.substring(firstProp.indexOf('[') + 1, firstProp.indexOf(']'));
-                        index = parseInt(index);
-
-                        if (firstProp.indexOf('[') == 0) {
-                            if (!obj[index]) { obj[index] = {}; };
-                            this.setVal(obj[index], lastProp, val);
-                        } else if (firstProp.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-
-                            if (!obj[propertyName]) { obj[propertyName] = []; };
-
-                            if (!obj[propertyName][index]) { obj[propertyName][index] = {}; };
-
-                            this.setVal(obj[propertyName][index], lastProp, val);
-                        }
-                    } else {
-                        if (!obj[firstProp]) {
-                            obj[firstProp] = {};
-                        }
-                        this.setVal(obj[firstProp], lastProp, val);
-                    }
-                } else {
-                    var arrayReg = /\[\d*\]/;
-                    if (arrayReg.test(pStr)) {
-                        var index = pStr.substring(pStr.indexOf('[') + 1, pStr.lastIndexOf(']'));
-
-                        index = parseInt(index);
-                        if (pStr.indexOf('[') == 0) {
-                            obj[index] = val;
-                        } else if (pStr.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            if (!obj[propertyName]) {
-                                obj[propertyName] = [];
-                            }
-                            obj[propertyName][index] = val;
-                        }
-                    } else {
-                        obj[pStr] = val;
-                    }
+                pStr = pStr.replace(/^\./,'');
+                // TODO: replace with regexp /\[\s*\d+\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
+                var reg = /\[\s*\d+\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g , propArr = [] , execStr;
+                while(execStr = reg.exec(pStr)){
+                    propArr.push(execStr[0]);
                 }
+                if (propArr.length > 0) {
+                    var firstProp = propArr[0];
+
+                    var remainPropStr = pStr.replace(firstProp,'');
+
+                }
+
                 return obj;
             },
             beautifyNames: function (obj, deep, changeName) {
