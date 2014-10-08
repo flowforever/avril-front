@@ -25,6 +25,10 @@
             <br/>
             full name<input av-bind="$tryGet($scope.firstName) + ' ' + $tryGet($scope.lastName) " name="fullName">
         </form>
+
+        <div>
+            func: <span av-func="function(){ describe('avril.mvvm.js (html)', function(){  describe('#av-func', function(){ it('should work', function(){}) }); }) }"></span>
+        </div>
     </div>
 
     <script src="../ref/jquery-1.11.1.js"></script>
