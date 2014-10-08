@@ -315,7 +315,7 @@
                 }) ;
                 return arr;
             }
-            , _eventPre = 'ave_' + config.guid
+            , _eventPre = 'ave_'
             , getSubscribeEvents = function(){
                 var results = [];
                 for(var k in avril.event.events){
@@ -324,6 +324,7 @@
                 return results;
             }
             , getEventChannel = function(subscribePath){
+                subscribePath = _standardiseNs(subscribePath);
                 return avril.event.get(subscribePath,_eventPre);
             }
             , _optName = function(opt){ return '__$$__' + config.guid + '__$$__' + opt; }
@@ -349,7 +350,7 @@
                     var mvvm = avril.mvvm;
                     $(document).on(Mvvm.defaults.trigger_events, mvvm.selector ,function(){
                         var $el = $(this);
-                        if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
+                        if($el.is(mvvm.selector) && $el.is('input,textarea,select') && $el.attr( binderName('bind')) && getSimpleReg().test( $el.attr( binderName('bind') ) ) ){
                             var absPath = mvvm.getAbsNs($el);
                             mvvm.setVal(absPath, $el.val(), $el);
                         }
@@ -357,6 +358,20 @@
                     $('html').attr(attrPre+'-scope','$root').addClass('av-mvvm');
                 }
             }()
+            , _standardiseNs = function(ns){
+                var avObjExecPropArr = avril.object._getExecPropArr(ns);
+                return avril.array(avObjExecPropArr).select(function(execArr,index){
+                    var prop = avril.object._getPropFromExecArr(execArr);
+                    if(execArr[1]){
+                        return '['+prop+']';
+                    }else if(execArr[2]){
+                        return '[\''+ prop +'\']'
+                    }
+
+                    return '[\''+ prop +'\']'
+                }).value().join('');
+            }
+
             ;
 
         this.selector = selector();
@@ -827,7 +842,7 @@
             , removeItem: function($el, data,index, args) {
                 var $elToRemove = this.getItemByDataIndex($el, index)
                     , $siblings = $elToRemove.nextAll( '['+ this.eachItemAttrName + '="generated"][av-scope!="['+index+']"]' )
-                    , ns = getNs($el)
+                    , ns = _standardiseNs( getNs($el) )
                     , changeSubscribeEvents = function () {
                         var allEvents = getSubscribeEvents();
                         avril.array( allEvents ).each(function(currentEventPath){
@@ -1003,22 +1018,24 @@
 
         //add try expresion parser
         addExpressionParser(function(expression){
-            var _tryReg = /\$(tryGet)\((.+?)\)/g;
+            var _tryReg = /\$(tryGet)\s*\(\s*([\$|\w|\'|\.|\"]+)\s*(\,\s*[\$|\w|\'|\"]+)*\s*\)/g;
             if(_tryReg.test(expression)){
-                expression = expression.replace(_tryReg, function(match,method,arg){
-                    if(arg.indexOf('"') >=0 || arg.indexOf("'") >=0){
+                expression = expression.replace(_tryReg, function(match,method,arg0,otherArg){
+                    otherArg = otherArg === undefined ? '' : otherArg;
+                    if(arg0.indexOf('"') >=0 || arg0.indexOf("'") >=0){
                         return match;
                     }else{
-                        return '$'+ method +'("'+arg+'")';
+                        return '$'+ method +'("'+arg0+'"'+otherArg+')';
                     }
                 });
             }
             return expression;
         });
 
-        addMagic('$tryGet', function(val){
+        addMagic('$tryGet', function(val, defaultValue){
             var $scope = this;
-            return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || '';
+            defaultValue = defaultValue === undefined? '' : defaultValue;
+            return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || defaultValue ;
         });
 
         //add $scope or $root to simple expresion
@@ -1057,6 +1074,9 @@
         addMagic('$avArray', function(ns){
             if(arguments.length ===0 ){
                 ns = this.$ns;
+            }
+            if(ns.indexOf('$root') !== 0){
+                ns = this.$ns + '.' +ns;
             }
             return self.array(ns,this.$el);
         });

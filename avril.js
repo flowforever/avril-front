@@ -398,76 +398,60 @@
                 return input == null || 'number,boolean,string,undefined'.split(',').indexOf(typeof input) >= 0;
             },
             getVal: function (obj, pStr) {
-                if (pStr.indexOf('.') > 0) {
-                    var firstProp = pStr.substring(0, pStr.indexOf("."));
-
-                    var lastProp = pStr.substring(pStr.indexOf('.') + 1);
-                    if (firstProp.indexOf('[') >= 0) {
-                        var index = firstProp.substring(firstProp.indexOf('[') + 1, firstProp.lastIndexOf(']'));
-                        index = parseInt(index);
-                        if (firstProp.indexOf('[') == 0) {
-                            return this.getVal(obj[index], lastProp);
-                        } else if (firstProp.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            if (propertyName.indexOf('"') == 0) {
-                                propertyName = propertyName.substring(1, propertyName.length - 2);
-                            }
-                            return this.getVal(obj[propertyName][index], lastProp);
-                        }
-                    } else {
-                        var pObj = obj[firstProp];
-                        return this.getVal(pObj, lastProp);
+                var propArr = this._getExecPropArr(pStr)
+                    , getProp = this._getPropFromExecArr
+                    , prevObj = obj
+                    ;
+                avril.array(propArr).each(function(execArr, index){
+                    var prop = getProp(execArr);
+                    prevObj = prevObj[prop];
+                    if(!prevObj){
+                        return false;
                     }
-                } else {
-                    if (pStr.indexOf('[') >= 0) {
-                        var index = pStr.substring(pStr.indexOf('[') + 1, pStr.lastIndexOf(']'));
-                        index = parseInt(index);
-                        if (pStr.indexOf('[') == 0) {
-                            return obj[index];
-                        } else if (pStr.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            return obj[propertyName][index];
-                        }
-                    } else {
-                        return obj[pStr];
-                    }
-                }
+                });
+                return prevObj;
             },
             setVal: function (obj, pStr, val) {
-                pStr = pStr.replace(/^\./,'');
                 // TODO: replace with regexp /\[\s*\d+\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
+                var propArr = this._getExecPropArr(pStr)
+                    , getProp = this._getPropFromExecArr
+                    , prevObj = obj;
+                
+                avril.array(propArr).each(function(execArr, index){
+                    var prop = getProp(execArr);
+                    if(index === propArr.length - 1){
+                        prevObj[prop] = val;
+                        return false;
+                    }else{
+                        if(!avril.isObj( prevObj[prop] ) ){
+                            var nextExecArr = propArr[ index +1 ];
+                            // is array visitor
+                            if(nextExecArr[1]){
+                                prevObj[prop] = [];
+                            }else{
+                                prevObj[prop] = {};
+                            }
+                        }
+                        prevObj = prevObj[prop];
+                    }
+                });
+
+                return obj;
+            },
+            _getPropFromExecArr : function(execArr){
+                return avril.array(execArr).first(function(val,index){
+                    return index >0 && val;
+                });
+            },
+            _getExecPropArr: function(pStr){
                 var reg = /\[\s*(\d+)\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
                     , propArr = []
-                    , execStr
-                    , getProp = function(execArr){
-                        return avril.array(execArr).where(function(val,index){
-                            return index>0 && val;
-                        }).value()[0];
-                    };
+                    , execStr;
 
                 while(execStr = reg.exec(pStr)){
                     propArr.push(execStr);
                 };
-                
-                avril.array(propArr).each(function(execArr, index){
-                    var prop =getProp(execArr);
-                    if(index === propArr.length - 1){
-                        obj[prop] = val;
-                    }else{
-                        if(obj[prop]){
-                            obj = obj[prop];
-                        }else{
-                            var nextExecArr = propArr[ index +1 ];
-                            // is array visitor
-                            if(nextExecArr[1]){
-                                obj[prop] = [];
-                            }else{
-                                obj[prop] = {};
-                            }
-                        }
-                    }
-                });
-                return obj;
+                return propArr;
             },
             beautifyNames: function (obj, deep, changeName) {
                 var self = this;
@@ -660,8 +644,6 @@
                 return obj['___hash___'] || (obj['___hash___'] = avril.guid()+'__'+(counter++));
             }
         })();
-
-        //window.name = 'avril';
 
         avril.getHash = __getHash;
 
@@ -988,7 +970,7 @@
             self.each = function (func) {
                 func = parseFuncLambda(func);
                 for (var i = 0; i < arr.length; i++) {
-                    if (func(arr[i], i) == false) {
+                    if (func(arr[i], i) === false) {
                         break;
                     }
                 }
@@ -999,7 +981,7 @@
                 func = parseFuncLambda(func);
                 var results = [];
                 this.each(function (value, index) {
-                    if (func(value, index) == true) {
+                    if (func(value, index)) {
                         results.push(value);
                     }
                 });
