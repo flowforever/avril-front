@@ -467,6 +467,7 @@
         };
 
         this.array = function(ns, $el) {
+            ns = resolveAbsNs('$root', ns);
             var array = this.getVal(ns);
             if(!(array instanceof  Array)){
                 array = [];
@@ -531,6 +532,7 @@
         };
 
         this.getVal = function(ns){
+            ns = resolveAbsNs('$root', ns);
             return avril.object(_rootScopes).tryGetVal(ns);
         };
 

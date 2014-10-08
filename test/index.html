@@ -17,7 +17,8 @@
 <body>
     <div id="mocha"></div>
 
-    <div>
+    <div style="">
+        <h2>basicForm</h2>
         <form av-scope="basicForm" id="form0">
             first name <input av-bind="firstName" name="firstName">
             <br/>
@@ -26,9 +27,25 @@
             full name<input av-bind="$tryGet($scope.firstName) + ' ' + $tryGet($scope.lastName) " name="fullName">
         </form>
 
+        <h2>av-func</h2>
         <div>
-            func: <span av-func="function(){ describe('avril.mvvm.js (html)', function(){  describe('#av-func', function(){ it('should work', function(){}) }); }) }"></span>
+            func: <span av-func="function(){ describe('avril.mvvm.js (html)', function(){  describe('#av-func', function(){ it('should work', function(){}) }); }) }">function(){ describe('avril.mvvm.js (html)', function(){  describe('#av-func', function(){ it('should work', function(){}) }); }) }</span>
         </div>
+
+        <h2>av-each(virtual scope #virtualScope)</h2>
+        <ul id="virtualScope" av-each="new Array(5)">
+            <li> <span av-bind="$index()"></span> <span av-bind="new Date()"></span>  </li>
+        </ul>
+
+        <h2>av-each(virtual scope #basicArray (<span av-bind="basicArray.length"></span>) )  </h2>
+        <ul id="basicArray" av-scope="basicArray" av-each="$scope">
+            <li> <span av-bind="$index()"></span> <input av-bind="name"> - <span av-bind="name"></span> - <span
+                    av-bind="id"></span> <a href="javascript:">remove</a>
+            </li>
+        </ul>
+        <p> <a id="basicArray-addBtn" href="javascript:;"
+               av-event="{click:function(){ $avArray('basicArray').add({ name:'name' + avril.guid() , id: avril.guid() }) } }">Add</a> </p>
+
     </div>
 
     <script src="../ref/jquery-1.11.1.js"></script>

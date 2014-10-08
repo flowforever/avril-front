@@ -13,7 +13,7 @@
         basicArray: function(){
             var res = [];
             for(var i=0;i<10;i++){
-                res.push({ i: i, name:'name' + i , guid: avril.guid() })
+                res.push({ i: i, name:'name' + i , id: avril.guid() })
             }
             return res;
         }()
@@ -37,7 +37,7 @@
 
         describe('avril.mvvm.js', function(){
 
-            this.timeout(100000);
+            this.timeout(1000000);
 
             describe('#av-bind', function(){
 
@@ -62,6 +62,25 @@
                     },2000)
                 })
             })
+
+            describe('#av-each', function(){
+                it('#virtualScope should have 5 children', function(){
+                    expect( $('#virtualScope li:visible').length ).equal(5)
+                });
+
+                it('#realScope should have 10 children', function(){
+                    expect( $('#basicArray li:visible').length ).equal(10)
+                });
+
+                it('#realScope should have 11 children', function(){
+                    mvvm.array('$root.basicArray').add({ name: rootModel.basicForm.firstName, id: avril.guid() });
+                    expect( $('#basicArray li:visible').length ).equal(11);
+                    expect( mvvm.getVal('basicArray[10].name') ).equal(rootModel.basicForm.firstName);
+                    expect( mvvm.getVal('$root.basicArray[10].name') ).equal(rootModel.basicForm.firstName);
+                });
+
+            });
+
         });
 
     });
