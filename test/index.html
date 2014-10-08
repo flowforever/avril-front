@@ -8,9 +8,6 @@
     <!-- Latest compiled and minified CSS -->
     <link rel="stylesheet" href="../avril-release/avril.css">
 
-    <link rel="stylesheet" href="../ref/bootstrap/css/bootstrap.css">
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="../ref/bootstrap/css/bootstrap-theme.min.css">
     <style>
         #mocha-stats .progress{
             height: auto;
@@ -18,15 +15,16 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="mocha"></div>
-    </div>
+    <div id="mocha"></div>
 
-    <div class="container">
-        <div class="row">
-            <h2>Array Test</h2>
-            <ul></ul>
-        </div>
+    <div>
+        <form av-scope="basicForm" id="form0">
+            first name <input av-bind="firstName" name="firstName">
+            <br/>
+            last name <input av-bind="lastName" name="lastName">
+            <br/>
+            full name<input av-bind="$tryGet($scope.firstName) + ' ' + $tryGet($scope.lastName) " name="fullName">
+        </form>
     </div>
 
     <script src="../ref/jquery-1.11.1.js"></script>

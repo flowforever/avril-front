@@ -451,6 +451,9 @@
         };
 
         this.setVal = function(ns, value , $sourceElement, silent) {
+            if(ns.indexOf('$root') !== 0){
+                ns = '$root' + (ns.indexOf('[') === 0 ? '' : '.') + ns;
+            }
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
             if(oldValue != value){
                 if(value){
