@@ -436,17 +436,37 @@
             setVal: function (obj, pStr, val) {
                 pStr = pStr.replace(/^\./,'');
                 // TODO: replace with regexp /\[\s*\d+\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
-                var reg = /\[\s*\d+\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g , propArr = [] , execStr;
+                var reg = /\[\s*(\d+)\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
+                    , propArr = []
+                    , execStr
+                    , getProp = function(execArr){
+                        return avril.array(execArr).where(function(val,index){
+                            return index>0 && val;
+                        }).value()[0];
+                    };
+
                 while(execStr = reg.exec(pStr)){
-                    propArr.push(execStr[0]);
-                }
-                if (propArr.length > 0) {
-                    var firstProp = propArr[0];
-
-                    var remainPropStr = pStr.replace(firstProp,'');
-
-                }
-
+                    propArr.push(execStr);
+                };
+                
+                avril.array(propArr).each(function(execArr, index){
+                    var prop =getProp(execArr);
+                    if(index === propArr.length - 1){
+                        obj[prop] = val;
+                    }else{
+                        if(obj[prop]){
+                            obj = obj[prop];
+                        }else{
+                            var nextExecArr = propArr[ index +1 ];
+                            // is array visitor
+                            if(nextExecArr[1]){
+                                obj[prop] = [];
+                            }else{
+                                obj[prop] = {};
+                            }
+                        }
+                    }
+                });
                 return obj;
             },
             beautifyNames: function (obj, deep, changeName) {
