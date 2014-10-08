@@ -297,9 +297,9 @@
                 dependences = dependences.trimAll().split(',');
             }
             var getEvent = avril.module.getModuleEvent
-            , waitModules = dependences.where(function (ns) {
+            , waitModules = avril.array(dependences).where(function (ns) {
                 return !avril.object(window).getVal(ns);
-            })
+            }).value()
             , executeCount = 0
             , execute = function (times) {
                 printDependences();
@@ -314,12 +314,12 @@
                 }
             }
             , printDependences = function () {
-                var _waits = waitModules.where(function (module) {
+                var _waits = avril.array(waitModules).where(function (module) {
                     return !avril.object(window).getVal(module);
-                });
-                var _finished = dependences.where(function (module) {
+                }).value();
+                var _finished = avril.array(dependences).where(function (module) {
                     return !!avril.object(window).getVal(module);
-                });
+                }).value();
                 if (_waits.length == 0) {
                     console.log(namespace + ' dependences loaded complete.');
                 } else {
@@ -328,7 +328,7 @@
             };
 
             if (waitModules.length > 0) {
-                waitModules.each(function (ns) {
+                avril.array(waitModules).each(function (ns) {
                     getEvent(ns)(function () {
                         execute(++executeCount);
                     });
@@ -1350,7 +1350,7 @@
                         var _self = this;
                         if (typeof str == 'string') {
                             if (str.indexOf(',') >= 0) {
-                                str.split(',').each(function (funName) {
+                                avril.array(str.split(',')).each(function (funName) {
                                     hook(_self, funName);
                                 });
                             } else {
