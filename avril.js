@@ -412,7 +412,7 @@
                 return prevObj;
             },
             setVal: function (obj, pStr, val) {
-                // TODO: replace with regexp /\[\s*\d+\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
+                
                 var propArr = this._getExecPropArr(pStr)
                     , getProp = this._getPropFromExecArr
                     , prevObj = obj;
