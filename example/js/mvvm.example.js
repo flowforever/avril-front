@@ -15,6 +15,7 @@
     mvvm.setVal('$root.mainMenu',[
         { text: 'Home', url: 'index.html'  }
         , { text: 'Array', url: 'array.html'  }
+        , { text: 'Test', url: '/avril-front/test/index.html'  }
     ]);
 
 

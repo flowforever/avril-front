@@ -62,7 +62,7 @@ module.exports = function(grunt){
                 }
             }
         }
-        , copy: gruntConfig.copy || {}
+        , copy: gruntConfig.copy
     };
 
     var watchDevConfig = defConfig['watch-dev'] = Object.create(defConfig.watch);
