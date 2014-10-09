@@ -19,7 +19,7 @@ module.exports = function(grunt){
         , 'avril.mvvm.js'
     ];
 
-    grunt.initConfig({
+    var defConfig = {
         pkg: require('./package.json')
         , concat:{
             all:{
@@ -62,7 +62,14 @@ module.exports = function(grunt){
                 }
             }
         }
-    });
+        , copy: gruntConfig.copy || {}
+    };
+
+    var watchDevConfig = defConfig['watch-dev'] = Object.create(defConfig.watch);
+
+    watchDevConfig.scripts.tasks = watchDevConfig.scripts.tasks.concat(['copy']);
+
+    grunt.initConfig(defConfig);
 
     grunt.event.on('watch', function(action, filepath, target) {
         grunt.log.writeln(target + ': ' + filepath + ' has ' + action);
@@ -76,6 +83,10 @@ module.exports = function(grunt){
 
     grunt.loadNpmTasks('grunt-contrib-less');
 
+    grunt.loadNpmTasks('grunt-contrib-copy');
+
     grunt.registerTask('default' , ['concat', 'uglify', "less" ] );
+
+    grunt.registerTask('watch-dev', ['watch'] );
 
 }
