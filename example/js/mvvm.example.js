@@ -2,7 +2,7 @@
  * Created by trump on 14/6/26.
  */
 (function($){
-    //avril.Mvvm.defaults.show_dev_info = true;
+    avril.Mvvm.defaults.show_dev_info = true;
 
     var setCurrentMenu = function(){
         var paths = location.pathname.split('/');

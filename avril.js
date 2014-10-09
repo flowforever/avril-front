@@ -297,9 +297,9 @@
                 dependences = dependences.trimAll().split(',');
             }
             var getEvent = avril.module.getModuleEvent
-            , waitModules = dependences.where(function (ns) {
+            , waitModules = avril.array(dependences).where(function (ns) {
                 return !avril.object(window).getVal(ns);
-            })
+            }).value()
             , executeCount = 0
             , execute = function (times) {
                 printDependences();
@@ -314,12 +314,12 @@
                 }
             }
             , printDependences = function () {
-                var _waits = waitModules.where(function (module) {
+                var _waits = avril.array(waitModules).where(function (module) {
                     return !avril.object(window).getVal(module);
-                });
-                var _finished = dependences.where(function (module) {
+                }).value();
+                var _finished = avril.array(dependences).where(function (module) {
                     return !!avril.object(window).getVal(module);
-                });
+                }).value();
                 if (_waits.length == 0) {
                     console.log(namespace + ' dependences loaded complete.');
                 } else {
@@ -328,7 +328,7 @@
             };
 
             if (waitModules.length > 0) {
-                waitModules.each(function (ns) {
+                avril.array(waitModules).each(function (ns) {
                     getEvent(ns)(function () {
                         execute(++executeCount);
                     });
@@ -398,89 +398,60 @@
                 return input == null || 'number,boolean,string,undefined'.split(',').indexOf(typeof input) >= 0;
             },
             getVal: function (obj, pStr) {
-                if (pStr.indexOf('.') > 0) {
-                    var firstProp = pStr.substring(0, pStr.indexOf("."));
-
-                    var lastProp = pStr.substring(pStr.indexOf('.') + 1);
-                    if (firstProp.indexOf('[') >= 0) {
-                        var index = firstProp.substring(firstProp.indexOf('[') + 1, firstProp.lastIndexOf(']'));
-                        index = parseInt(index);
-                        if (firstProp.indexOf('[') == 0) {
-                            return this.getVal(obj[index], lastProp);
-                        } else if (firstProp.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            if (propertyName.indexOf('"') == 0) {
-                                propertyName = propertyName.substring(1, propertyName.length - 2);
-                            }
-                            return this.getVal(obj[propertyName][index], lastProp);
-                        }
-                    } else {
-                        var pObj = obj[firstProp];
-                        return this.getVal(pObj, lastProp);
+                var propArr = this._getExecPropArr(pStr)
+                    , getProp = this._getPropFromExecArr
+                    , prevObj = obj
+                    ;
+                avril.array(propArr).each(function(execArr, index){
+                    var prop = getProp(execArr);
+                    prevObj = prevObj[prop];
+                    if(!prevObj){
+                        return false;
                     }
-                } else {
-                    if (pStr.indexOf('[') >= 0) {
-                        var index = pStr.substring(pStr.indexOf('[') + 1, pStr.lastIndexOf(']'));
-                        index = parseInt(index);
-                        if (pStr.indexOf('[') == 0) {
-                            return obj[index];
-                        } else if (pStr.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            return obj[propertyName][index];
-                        }
-                    } else {
-                        return obj[pStr];
-                    }
-                }
+                });
+                return prevObj;
             },
             setVal: function (obj, pStr, val) {
-                if (pStr.indexOf('.') > 0) {
-                    var firstProp = pStr.substring(0, pStr.indexOf("."));
-
-                    var lastProp = pStr.substring(pStr.indexOf('.') + 1);
-
-                    if (firstProp.indexOf('[') >= 0) {
-                        var index = firstProp.substring(firstProp.indexOf('[') + 1, firstProp.indexOf(']'));
-                        index = parseInt(index);
-
-                        if (firstProp.indexOf('[') == 0) {
-                            if (!obj[index]) { obj[index] = {}; };
-                            this.setVal(obj[index], lastProp, val);
-                        } else if (firstProp.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-
-                            if (!obj[propertyName]) { obj[propertyName] = []; };
-
-                            if (!obj[propertyName][index]) { obj[propertyName][index] = {}; };
-
-                            this.setVal(obj[propertyName][index], lastProp, val);
-                        }
-                    } else {
-                        if (!obj[firstProp]) {
-                            obj[firstProp] = {};
-                        }
-                        this.setVal(obj[firstProp], lastProp, val);
-                    }
-                } else {
-                    var arrayReg = /\[\d*\]/;
-                    if (arrayReg.test(pStr)) {
-                        var index = pStr.substring(pStr.indexOf('[') + 1, pStr.lastIndexOf(']'));
-
-                        index = parseInt(index);
-                        if (pStr.indexOf('[') == 0) {
-                            obj[index] = val;
-                        } else if (pStr.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            if (!obj[propertyName]) {
-                                obj[propertyName] = [];
+                
+                var propArr = this._getExecPropArr(pStr)
+                    , getProp = this._getPropFromExecArr
+                    , prevObj = obj;
+                
+                avril.array(propArr).each(function(execArr, index){
+                    var prop = getProp(execArr);
+                    if(index === propArr.length - 1){
+                        prevObj[prop] = val;
+                        return false;
+                    }else{
+                        if(!avril.isObj( prevObj[prop] ) ){
+                            var nextExecArr = propArr[ index +1 ];
+                            // is array visitor
+                            if(nextExecArr[1]){
+                                prevObj[prop] = [];
+                            }else{
+                                prevObj[prop] = {};
                             }
-                            obj[propertyName][index] = val;
                         }
-                    } else {
-                        obj[pStr] = val;
+                        prevObj = prevObj[prop];
                     }
-                }
+                });
+
                 return obj;
+            },
+            _getPropFromExecArr : function(execArr){
+                return avril.array(execArr).first(function(val,index){
+                    return index >0 && val;
+                });
+            },
+            _getExecPropArr: function(pStr){
+                var reg = /\[\s*(\d+)\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
+                    , propArr = []
+                    , execStr;
+
+                while(execStr = reg.exec(pStr)){
+                    propArr.push(execStr);
+                };
+                return propArr;
             },
             beautifyNames: function (obj, deep, changeName) {
                 var self = this;
@@ -673,8 +644,6 @@
                 return obj['___hash___'] || (obj['___hash___'] = avril.guid()+'__'+(counter++));
             }
         })();
-
-        //window.name = 'avril';
 
         avril.getHash = __getHash;
 
@@ -1001,7 +970,7 @@
             self.each = function (func) {
                 func = parseFuncLambda(func);
                 for (var i = 0; i < arr.length; i++) {
-                    if (func(arr[i], i) == false) {
+                    if (func(arr[i], i) === false) {
                         break;
                     }
                 }
@@ -1012,7 +981,7 @@
                 func = parseFuncLambda(func);
                 var results = [];
                 this.each(function (value, index) {
-                    if (func(value, index) == true) {
+                    if (func(value, index)) {
                         results.push(value);
                     }
                 });
@@ -1350,7 +1319,7 @@
                         var _self = this;
                         if (typeof str == 'string') {
                             if (str.indexOf(',') >= 0) {
-                                str.split(',').each(function (funName) {
+                                avril.array(str.split(',')).each(function (funName) {
                                     hook(_self, funName);
                                 });
                             } else {
