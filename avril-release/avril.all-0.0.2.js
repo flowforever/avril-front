@@ -128,208 +128,6 @@
         }
     }
 
-    function arrayEx(org) {
-
-        var instance = {};
-
-        function isFunc(func) {
-            return typeof func == 'function';
-        }
-
-        function parseFuncLambda(func) {
-            return isFunc(func) ?
-                func :
-                (isLambda(func) ? func.lambda() : function () {
-
-                });
-        }
-
-        function sort(instance, field, dirc) {
-            dirc = dirc || 1;
-            return instance.sort(function (x, y) {
-                if (field) {
-                    if (x[field] > y[field]) {
-                        return dirc;
-                    } else {
-                        return -1 * dirc;
-                    }
-                } else {
-                    if (x > y) {
-                        return dirc;
-                    } else {
-                        return -1 * dirc;
-                    }
-                }
-            });
-        }
-
-        instance.asc = function (field) {
-            return sort(this, field, 1);
-        }
-
-        instance.desc = function (field) {
-            return sort(this, field, -1);
-        }
-
-        instance.each = function (func) {
-            func = parseFuncLambda(func);
-            for (var i = 0; i < this.length; i++) {
-                if (func(this[i], i) == false) {
-                    break;
-                }
-            }
-            return this;
-        }
-
-        instance.where = function (func) {
-            func = parseFuncLambda(func);
-            var results = [];
-            this.each(function (value, index) {
-                if (func(value, index) == true) {
-                    results.push(value);
-                }
-            });
-            return results;
-        }
-
-        instance.first = function (func) {
-            func = parseFuncLambda(func);
-            if (this.length == 0) {
-                return null;
-            }
-            if (func) {
-                return this.where(func)[0];
-            } else {
-                return this[0];
-            }
-        }
-
-        instance.last = function (func) {
-            func = parseFuncLambda(func);
-            if (this.length == 0) {
-                return null;
-            }
-            if (isFunc(func)) {
-                return this.where(func).last();
-            } else {
-                return this[this.length - 1];
-            }
-        }
-
-        instance.groupBy = function (func) {
-            func = parseFuncLambda(func);
-            if (func) {
-                var obj = {};
-                this.each(function (item, index) {
-                    var key = func(item, index) + '';
-                    if (!obj[key]) {
-                        obj[key] = [];
-                    }
-                    obj[key].push(item);
-                });
-                return obj;
-            }
-            return this;
-        }
-
-        instance.take = function (num) {
-            var result = [];
-            for (var i = 0; i < num; i++) {
-                result.push(this[i]);
-            }
-            return result;
-        }
-
-        instance.skip = function (num) {
-            var result = [];
-            for (var i = num; i < this.length; i++) {
-                result.push(this[i]);
-            }
-            return result;
-        }
-
-        instance.select = function (func) {
-            func = parseFuncLambda(func);
-            var results = [];
-            this.each(function (value, index) {
-                results.push(func.call(value, value, index));
-            });
-            return results;
-        }
-
-        instance.remove = function (func) {
-            func = parseFuncLambda(func);
-            var toRemove = [];
-            this.each(function (val, index) {
-                if (func(val, index)) { toRemove.push(index); }
-            });
-            var arr = this;
-            toRemove.reverse().each(function (val) { arr.splice(val, 1) });
-            return arr;
-        }
-
-        instance.removeElement = function (elment) {
-            return this.remove(function (value, index) { return value == elment; });
-        }
-
-        instance.removeAt = function (i) {
-            return this.remove(function (value, index) { return index == i; });
-        }
-
-        instance.indexOf = function (element) {
-            var i = -1;
-            this.each(function (value, index) {
-                if (value == element) {
-                    i = index;
-                    return false;
-                }
-            });
-
-            return i;
-        }
-
-        instance.contain = function (element, elementIsFunction) {
-            if (true != elementIsFunction && typeof element == 'function') {
-                return this.where(element).length > 0;
-            }
-            return this.indexOf(element) >= 0;
-        }
-
-        var isFunc = function (obj) {
-            return typeof obj == 'function';
-        }
-
-        instance.distinc = function (compareFunc) {
-            var arr = [];
-            this.each(function (value, index) {
-                if (isFunc(compareFunc)
-                    && compareFunc(value, index) != false) {
-                    arr.push(value);
-                } else if (!isFunc(compareFunc)
-                    && !arr.contain(value)) {
-                    arr.push(value);
-                }
-            });
-            return arr;
-        }
-
-        instance.clone = function () {
-            var arr = [];
-            for (var i = 0; i < this.length; i++) {
-                arr.push(this[i]);
-            }
-            return arr;
-        }
-
-        for (var k in instance) {
-            org[k] = org[k] || instance[k];
-        }
-
-        return org;
-    }
-
-    arrayEx(Array.prototype);
-
     if (!Function.prototype.bind) {
         Function.prototype.bind = function (oThis) {
             if (typeof this !== "function") {
@@ -499,9 +297,9 @@
                 dependences = dependences.trimAll().split(',');
             }
             var getEvent = avril.module.getModuleEvent
-            , waitModules = dependences.where(function (ns) {
+            , waitModules = avril.array(dependences).where(function (ns) {
                 return !avril.object(window).getVal(ns);
-            })
+            }).value()
             , executeCount = 0
             , execute = function (times) {
                 printDependences();
@@ -516,12 +314,12 @@
                 }
             }
             , printDependences = function () {
-                var _waits = waitModules.where(function (module) {
+                var _waits = avril.array(waitModules).where(function (module) {
                     return !avril.object(window).getVal(module);
-                });
-                var _finished = dependences.where(function (module) {
+                }).value();
+                var _finished = avril.array(dependences).where(function (module) {
                     return !!avril.object(window).getVal(module);
-                });
+                }).value();
                 if (_waits.length == 0) {
                     console.log(namespace + ' dependences loaded complete.');
                 } else {
@@ -530,7 +328,7 @@
             };
 
             if (waitModules.length > 0) {
-                waitModules.each(function (ns) {
+                avril.array(waitModules).each(function (ns) {
                     getEvent(ns)(function () {
                         execute(++executeCount);
                     });
@@ -600,89 +398,60 @@
                 return input == null || 'number,boolean,string,undefined'.split(',').indexOf(typeof input) >= 0;
             },
             getVal: function (obj, pStr) {
-                if (pStr.indexOf('.') > 0) {
-                    var firstProp = pStr.substring(0, pStr.indexOf("."));
-
-                    var lastProp = pStr.substring(pStr.indexOf('.') + 1);
-                    if (firstProp.indexOf('[') >= 0) {
-                        var index = firstProp.substring(firstProp.indexOf('[') + 1, firstProp.lastIndexOf(']'));
-                        index = parseInt(index);
-                        if (firstProp.indexOf('[') == 0) {
-                            return this.getVal(obj[index], lastProp);
-                        } else if (firstProp.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            if (propertyName.indexOf('"') == 0) {
-                                propertyName = propertyName.substring(1, propertyName.length - 2);
-                            }
-                            return this.getVal(obj[propertyName][index], lastProp);
-                        }
-                    } else {
-                        var pObj = obj[firstProp];
-                        return this.getVal(pObj, lastProp);
+                var propArr = this._getExecPropArr(pStr)
+                    , getProp = this._getPropFromExecArr
+                    , prevObj = obj
+                    ;
+                avril.array(propArr).each(function(execArr, index){
+                    var prop = getProp(execArr);
+                    prevObj = prevObj[prop];
+                    if(!prevObj){
+                        return false;
                     }
-                } else {
-                    if (pStr.indexOf('[') >= 0) {
-                        var index = pStr.substring(pStr.indexOf('[') + 1, pStr.lastIndexOf(']'));
-                        index = parseInt(index);
-                        if (pStr.indexOf('[') == 0) {
-                            return obj[index];
-                        } else if (pStr.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            return obj[propertyName][index];
-                        }
-                    } else {
-                        return obj[pStr];
-                    }
-                }
+                });
+                return prevObj;
             },
             setVal: function (obj, pStr, val) {
-                if (pStr.indexOf('.') > 0) {
-                    var firstProp = pStr.substring(0, pStr.indexOf("."));
-
-                    var lastProp = pStr.substring(pStr.indexOf('.') + 1);
-
-                    if (firstProp.indexOf('[') >= 0) {
-                        var index = firstProp.substring(firstProp.indexOf('[') + 1, firstProp.indexOf(']'));
-                        index = parseInt(index);
-
-                        if (firstProp.indexOf('[') == 0) {
-                            if (!obj[index]) { obj[index] = {}; };
-                            this.setVal(obj[index], lastProp, val);
-                        } else if (firstProp.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-
-                            if (!obj[propertyName]) { obj[propertyName] = []; };
-
-                            if (!obj[propertyName][index]) { obj[propertyName][index] = {}; };
-
-                            this.setVal(obj[propertyName][index], lastProp, val);
-                        }
-                    } else {
-                        if (!obj[firstProp]) {
-                            obj[firstProp] = {};
-                        }
-                        this.setVal(obj[firstProp], lastProp, val);
-                    }
-                } else {
-                    var arrayReg = /\[\d*\]/;
-                    if (arrayReg.test(pStr)) {
-                        var index = pStr.substring(pStr.indexOf('[') + 1, pStr.lastIndexOf(']'));
-
-                        index = parseInt(index);
-                        if (pStr.indexOf('[') == 0) {
-                            obj[index] = val;
-                        } else if (pStr.indexOf('[') > 0) {
-                            var propertyName = pStr.substring(0, pStr.indexOf('['));
-                            if (!obj[propertyName]) {
-                                obj[propertyName] = [];
+                
+                var propArr = this._getExecPropArr(pStr)
+                    , getProp = this._getPropFromExecArr
+                    , prevObj = obj;
+                
+                avril.array(propArr).each(function(execArr, index){
+                    var prop = getProp(execArr);
+                    if(index === propArr.length - 1){
+                        prevObj[prop] = val;
+                        return false;
+                    }else{
+                        if(!avril.isObj( prevObj[prop] ) ){
+                            var nextExecArr = propArr[ index +1 ];
+                            // is array visitor
+                            if(nextExecArr[1]){
+                                prevObj[prop] = [];
+                            }else{
+                                prevObj[prop] = {};
                             }
-                            obj[propertyName][index] = val;
                         }
-                    } else {
-                        obj[pStr] = val;
+                        prevObj = prevObj[prop];
                     }
-                }
+                });
+
                 return obj;
+            },
+            _getPropFromExecArr : function(execArr){
+                return avril.array(execArr).first(function(val,index){
+                    return index >0 && val;
+                });
+            },
+            _getExecPropArr: function(pStr){
+                var reg = /\[\s*(\d+)\s*\]|\[\s*\'(.+)?\'\s*\]|\[\s*\"(.+)?\"\s*\]|\.?((\w|\$)+)/g
+                    , propArr = []
+                    , execStr;
+
+                while(execStr = reg.exec(pStr)){
+                    propArr.push(execStr);
+                };
+                return propArr;
             },
             beautifyNames: function (obj, deep, changeName) {
                 var self = this;
@@ -856,21 +625,6 @@
             return  Math.random().toString(32).replace('.', '_') +  (new Date().getTime().toString(32));
         }
 
-        avril.alert = function (msg) {
-            alert(msg);
-        }
-
-        avril.confirm = function (msg, callback, title) {
-            //Disable confirm if the message is null.
-            if (msg == undefined || msg == '') {
-                callback(true);
-            }
-            else
-                callback(confirm(msg));
-        }
-
-        var objReference = [];
-
         var __getHash = (function(){
             var counter = 0;
             return function (obj) {
@@ -890,8 +644,6 @@
                 return obj['___hash___'] || (obj['___hash___'] = avril.guid()+'__'+(counter++));
             }
         })();
-
-        //window.name = 'avril';
 
         avril.getHash = __getHash;
 
@@ -970,7 +722,7 @@
 
                 var toRemove = [];
 
-                this.eventList[name].each(function (fnObj) {
+                avril.array( this.eventList[name] ).each(function (fnObj) {
                     var execResult , ctx = fnObj.ctx || context;
                     if (data && data.length >= 0) {
                         var args = [];
@@ -989,8 +741,8 @@
                     }
                 });
 
-                toRemove.each(function(fnObj){
-                    self.eventList[name].removeElement(fnObj);
+                avril.array( toRemove ).each(function(fnObj){
+                    avril.array( self.eventList[name] ).removeElement(fnObj);
                 });
 
                 return result;
@@ -1001,27 +753,6 @@
         };
 
         event.events = event._event.eventList;
-
-        event.query = function (condiction){
-            var events = {};
-            if(typeof condiction === 'string'){
-                for(var e in event.events){
-                    if(e.indexOf(condiction)===0){
-                        events[e] = event.events[e];
-                    }
-                }
-            } else if(typeof  condiction === 'function'){
-                events = condiction(events.events);
-            }
-            return {
-                events: events
-                , exec: function(data){
-                    for(var e in events){
-                        avril.event._event.execute(e, null, data)
-                    }
-                }
-            };
-        };
 
         event.register = function (fnName, registerCtx) {
             if (event._event[fnName]) {
@@ -1153,6 +884,253 @@
 
     })(avril.$, avril);
 
+    //#endregion
+
+    //#region avril.array
+    (function (){
+        var isFunc = function (obj) {
+            return typeof obj == 'function';
+        };
+
+        var isLambda = function(str) {
+            return str && typeof (str) == 'string' && str.indexOf('=>') > 0;
+        };
+
+        var parseFuncLambda = function (func) {
+            return isFunc(func) ?
+                func :
+                (isLambda(func) ? toLambdaFunc(func) : function () {
+
+                });
+        };
+
+        var toLambdaFunc = function(str, ctx){
+            if (isLambda(str)) {
+                var lambdaKey = str.indexOf('=>')
+                    , args = str.substring(0, lambdaKey)
+                    , funcContent = str.substring(lambdaKey + 2)
+                    , funcStr = 'function';
+                if (args.indexOf('(') < 0) {
+                    funcStr += ' (' + args + ')';
+                } else {
+                    funcStr += args;
+                }
+
+                if (funcContent.indexOf('{') >= 0) {
+                    if (funcContent.indexOf(';') >= 0) {
+                        funcStr += funcContent;
+                    } else {
+                        funcStr += '{ return ' + funcContent + '; }';
+                    }
+                } else {
+                    funcStr += '{ return ' + funcContent + '; }'
+                }
+
+                if (ctx) {
+                    with (ctx) {
+                        return eval('(' + funcStr + ')');
+                    }
+                }
+
+                return eval('(' + funcStr + ')');
+            }
+        }
+
+        var sort = function(instance, field, direction) {
+            direction = direction || 1;
+            return instance.sort(function (x, y) {
+                if (field) {
+                    if (x[field] > y[field]) {
+                        return direction;
+                    } else {
+                        return -1 * direction;
+                    }
+                } else {
+                    if (x > y) {
+                        return direction;
+                    } else {
+                        return -1 * direction;
+                    }
+                }
+            });
+        };
+
+        var avArray = function(arr) {
+
+            var self = this;
+
+            self.asc = function (field) {
+                return sort(this, field, 1);
+            }
+
+            self.desc = function (field) {
+                return sort(this, field, -1);
+            }
+
+            self.each = function (func) {
+                func = parseFuncLambda(func);
+                for (var i = 0; i < arr.length; i++) {
+                    if (func(arr[i], i) === false) {
+                        break;
+                    }
+                }
+                return this;
+            }
+
+            self.where = function (func) {
+                func = parseFuncLambda(func);
+                var results = [];
+                this.each(function (value, index) {
+                    if (func(value, index)) {
+                        results.push(value);
+                    }
+                });
+                arr = results;
+                return this;
+            }
+
+            self.first = function (func) {
+                func = parseFuncLambda(func);
+                if (arr.length == 0) {
+                    return null;
+                }
+                if (func) {
+                    return this.where(func).value()[0];
+                } else {
+                    return arr[0];
+                }
+            }
+
+            self.last = function (func) {
+                func = parseFuncLambda(func);
+                if (arr.length == 0) {
+                    return null;
+                }
+                if (isFunc(func)) {
+                    return this.where(func).value()[0];
+                } else {
+                    return arr[this.length - 1];
+                }
+            }
+
+            self.groupBy = function (func) {
+                func = parseFuncLambda(func);
+                if (func) {
+                    var obj = {};
+                    this.each(function (item, index) {
+                        var key = func(item, index) + '';
+                        if (!obj[key]) {
+                            obj[key] = [];
+                        }
+                        obj[key].push(item);
+                    });
+                    return obj;
+                }
+                return this;
+            }
+
+            self.take = function (num) {
+                var result = [];
+                for (var i = 0; i < num; i++) {
+                    result.push(arr[i]);
+                }
+                arr = result;
+                return this;
+            }
+
+            self.skip = function (num) {
+                var result = [];
+                for (var i = num; i < arr.length; i++) {
+                    result.push(this[i]);
+                }
+                arr = result;
+                return this;
+            }
+
+            self.select = function (func) {
+                func = parseFuncLambda(func);
+                var results = [];
+                this.each(function (value, index) {
+                    results.push(func.call(value, value, index));
+                });
+                arr = results;
+                return this;
+            }
+
+            self.remove = function (func) {
+                func = parseFuncLambda(func);
+                var toRemove = [];
+                this.each(function (val, index) {
+                    if (func(val, index)) { toRemove.push(index); }
+                });
+
+                toRemove = toRemove.reverse();
+
+                for(var i = 0; i < toRemove.length;i++){
+                    arr.splice( toRemove[i] , 1)
+                }
+
+                return this;
+            }
+
+            self.removeElement = function (elment) {
+                return this.remove(function (value) { return value == elment; });
+            }
+
+            self.removeAt = function (i) {
+                return this.remove(function (value, index) { return index == i; });
+            }
+
+            self.indexOf = function (element) {
+                var i = -1;
+                this.each(function (value, index) {
+                    if (value == element) {
+                        i = index;
+                        return false;
+                    }
+                });
+                return i;
+            }
+
+            self.contain = function (element, elementIsFunction) {
+                if (true != elementIsFunction && typeof element == 'function') {
+                    return this.where(element).length > 0;
+                }
+                return this.indexOf(element) >= 0;
+            }
+
+            self.distinc = function (compareFunc) {
+                arr = [];
+                this.each(function (value, index) {
+                    if (isFunc(compareFunc)
+                        && compareFunc(value, index) != false) {
+                        arr.push(value);
+                    } else if (!isFunc(compareFunc)
+                        && !arr.contain(value)) {
+                        arr.push(value);
+                    }
+                });
+                return this;
+            }
+
+            self.clone = function () {
+                var results = [];
+                for (var i = 0; i < this.length; i++) {
+                    results.push(this[i]);
+                }
+                arr = results;
+                return this;
+            }
+
+            self.value = function(){
+                return arr;
+            }
+        }
+
+        avril.array = function(arr){
+            return new avArray(arr);
+        }
+    })();
     //#endregion
 
     //#region avril.createlib & avril.extendlib
@@ -1341,7 +1319,7 @@
                         var _self = this;
                         if (typeof str == 'string') {
                             if (str.indexOf(',') >= 0) {
-                                str.split(',').each(function (funName) {
+                                avril.array(str.split(',')).each(function (funName) {
                                     hook(_self, funName);
                                 });
                             } else {
@@ -1557,11 +1535,13 @@
         window.console.log = function () { };
     }
 
-    'log,warn,error'.split(',').each(function(action){
+    avril.array('log,warn,error'.split(',')).each(function(action){
         avril[action] = function(msg){
             console[action] && console[action](msg);
         }
-    })
+    });
+
+
 
 })(this);
 
@@ -2062,121 +2042,122 @@
 /**
  * Created by trump.wang on 2014/6/26.
  */
-;(function($, _evalExpression, _compiledExpression){
-    var Mvvm = avril.createlib('avril.Mvvm', function(options){
+;
+(function ($, _evalExpression, _compiledExpression) {
+    var Mvvm = avril.createlib('avril.Mvvm', function (options) {
 
         var config = $.extend(this.options(), options, {
                 guid: avril.guid()
             })
             , self = this
-            , getHash = function(key){
-                if(key){
-                    if(key instanceof  jQuery){
+            , getHash = function (key) {
+                if (key) {
+                    if (key instanceof  jQuery) {
                         key = key[0];
                     }
                     return 'hs_' + avril.getHash(key);
                 }
                 return key + '';
             }
-            , guid = function(){
+            , guid = function () {
                 return getHash({});
             }
             , binders = {}
-            , getCacheProvider = function(){
+            , getCacheProvider = function () {
                 var _c = {};
-                return function(name){
-                    return function(key,value){
+                return function (name) {
+                    return function (key, value) {
                         key = getHash(key);
-                        if(arguments.length == 1){
-                            return _c[name+'_'+key];
-                        }else if(arguments.length == 2){
-                            return _c[name+'_'+key] = value;
+                        if (arguments.length == 1) {
+                            return _c[name + '_' + key];
+                        } else if (arguments.length == 2) {
+                            return _c[name + '_' + key] = value;
                         }
                     }
                 }
             }()
-            , expressionCacher = getCacheProvider('expression_cache')
-            , binderCacher = getCacheProvider('expression_cache')
-            , initedElementCacher = getCacheProvider('inited_element_cache')
-            , htmlCacher = getCacheProvider('html_template_cache')
+            , expressionCacheProvider = getCacheProvider('expression_cache')
+            , binderCacheProvider = getCacheProvider('expression_cache')
+            , initedElementCacheProvider = getCacheProvider('inited_element_cache')
+            , htmlCacheProvider = getCacheProvider('html_template_cache')
             , expressionParsers = []
             , magics = {
                 global: {
 
-                }
-                , binders:{
+                }, binders: {
 
                 }
             }
-            , getBinders = function($el){
-                var binder = binderCacher($el);
-                if(binder){
+            , getBinders = function ($el) {
+                var binder = binderCacheProvider($el);
+                if (binder) {
                     return binder;
                 }
                 var eachGroupId = $el.attr(binderName('each-item-group-id'));
-                if(eachGroupId){
-                    binder = binderCacher('group_'+eachGroupId);
-                    if(binder){
+                if (eachGroupId) {
+                    binder = binderCacheProvider('group_' + eachGroupId);
+                    if (binder) {
                         return binder;
                     }
                 }
                 binder = {};
-                self.selector.split(',').each(function(selector){
-                    if( $el.is(selector)){
-                        var binderName = selector.replace(/\[|\]/g,'').replace(Mvvm.defaults.attr_pre+'-','');
+                avril.array(self.selector.split(',')).each(function (selector) {
+                    if ($el.is(selector)) {
+                        var binderName = selector.replace(/\[|\]/g, '').replace(Mvvm.defaults.attr_pre + '-', '');
                         binder[binderName] = binders[binderName];
                     }
                 });
-                //binderCacher($el,binder);
-                binderCacher('group_'+eachGroupId,binder);
+                //binderCacheProvider($el,binder);
+                binderCacheProvider('group_' + eachGroupId, binder);
                 return binder;
             }
-            ,  _rootScopes = {
-                $root:{}
-                , $controllers: {}
+            , _rootScopes = {
+                $root: {}, $controllers: {}
             }
             , _basicValueTypeReg = /^(true|false|null|undefined)$/
             , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
-            , getSimpleReg = function(){ return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g; }
-            , resolveAbsNs = function(ns, relativeNs){
+            , getSimpleReg = function () {
+                return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g;
+            }
+            , resolveAbsNs = function (ns, relativeNs) {
                 relativeNs = relativeNs || '';
-                if(relativeNs.indexOf('$root') == 0){
+                if (relativeNs.indexOf('$root') == 0) {
                     return relativeNs;
                 }
-                relativeNs = relativeNs.replace('$scope.','');
+                relativeNs = relativeNs.replace('$scope.', '');
 
-                if(!getSimpleReg().test(relativeNs)){
+                if (!getSimpleReg().test(relativeNs)) {
                     relativeNs = '';
                 }
 
-                if(relativeNs === _optName('indexChange')){
-                    ns = ns.replace(/\[\d+\]$/,'');
+                if (relativeNs === _optName('indexChange')) {
+                    ns = ns.replace(/\[\d+\]$/, '');
                 }
 
-                if(relativeNs.indexOf('$parent') < 0){
-                    return ns +'.' + relativeNs;
+                if (relativeNs.indexOf('$parent') < 0) {
+                    return ns + '.' + relativeNs;
                 }
                 var nsPaths = ns.split('.');
-                while(relativeNs.indexOf('$parent') == 0){
+                while (relativeNs.indexOf('$parent') == 0) {
                     nsPaths.pop();
-                    relativeNs = relativeNs.replace('$parent.','');
+                    relativeNs = relativeNs.replace('$parent.', '');
                 }
                 var pre = nsPaths.join('.');
-                return pre + (/\]$/.test(pre) ? '':'.') + relativeNs;
+                return pre + (/\]$/.test(pre) ? '' : '.') + relativeNs;
             }
-            , findExpressionDependency = function(){
+            , findExpressionDependency = function () {
                 var cache = {};
-                return function(expression, onFind){
-                    expression = expression.replace(/^\s+|\s+$/g,'');
-                    if(cache[expression]){
-                        return onFind? cache[expression].each(onFind) : cache[expression];
+                return function (expression, onFind) {
+                    expression = expression.replace(/^\s+|\s+$/g, '');
+                    if (cache[expression]) {
+                        return onFind ? avril.array(cache[expression]).each(onFind) : cache[expression];
                     }
                     var watchers = [] , watcher;
                     var hasIndexReg = /\$index\(\s*\)/g;
-                    if( hasIndexReg.test(expression) ){
+                    if (hasIndexReg.test(expression)) {
                         watchers.push(watcher = _optName('indexChange'));
                     }
-                    while(watcher = _expressionReg.exec(expression) ){
+                    while (watcher = _expressionReg.exec(expression)) {
                         watchers.push(watcher[0]);
                         onFind && onFind(watcher[0]);
                     }
@@ -2184,20 +2165,20 @@
                 };
             }()
             , binderName = Mvvm.bindingName.bind(Mvvm)
-            , binderDataName = function(bName){
+            , binderDataName = function (bName) {
                 return binderName(bName) + '-data';
             }
-            , getScope = function(ns, $el, binder){
-                var data = avril.object( _rootScopes ).tryGetVal(ns);
+            , getScope = function (ns, $el, binder) {
+                var data = avril.object(_rootScopes).tryGetVal(ns);
                 var res = {};
-                if(data && avril.isObj(data)){
-                    if(avril.isArray(data)){
-                        data.each(function(item,index){
+                if (data && avril.isObj(data)) {
+                    if (avril.isArray(data)) {
+                        avril.array(data).each(function (item, index) {
                             res[index] = item;
                         });
                         res.length = data.length;
-                    }else{
-                        for(var k in data){
+                    } else {
+                        for (var k in data) {
                             res[k] = data[k];
                         }
                     }
@@ -2214,355 +2195,353 @@
 
                 return res;
             }
-            , getElScope = function($el){
+            , getElScope = function ($el) {
                 $el = $($el);
                 return getScope(getNs($el), $el);
             }
-            , parseExpression = function (expression, binder){
+            , parseExpression = function (expression, binder) {
                 var cacheKey = expression = expression.trim();
-                if( _basicValueTypeReg.test(expression)){
+                if (_basicValueTypeReg.test(expression)) {
                     return expression;
                 }
-                if(!isNaN(expression)){
+                if (!isNaN(expression)) {
                     return expression;
                 }
-                if(expressionCacher(cacheKey)){
-                    return expressionCacher(cacheKey);
+                if (expressionCacheProvider(cacheKey)) {
+                    return expressionCacheProvider(cacheKey);
                 }
-                if(binder && binders[binder] && binders[binder].expressionParser){
+                if (binder && binders[binder] && binders[binder].expressionParser) {
                     expression = binders[binder].expressionParser(expression);
                 }
                 binder && expressionParsers.binders
                 && expressionParsers.binders[binder]
-                && expressionParsers.binders[binder].each(function(parser){
+                && avril.array(expressionParsers.binders[binder]).each(function (parser) {
                     expression = parser(expression);
                 });
-                expressionParsers.each(function(parser){
+                avril.array(expressionParsers).each(function (parser) {
                     expression = parser(expression);
                 });
-                expressionCacher(cacheKey,expression);
+                expressionCacheProvider(cacheKey, expression);
                 return expression;
             }
-            , executeExpression = function(expression, $el,binder){
-                expression = parseExpression(expression,binder);
+            , executeExpression = function (expression, $el, binder) {
+                expression = parseExpression(expression, binder);
                 var ns = getNs($el);
-                var ctx = getScope(ns,$el,binder);
+                var ctx = getScope(ns, $el, binder);
 
-                return Mvvm.executeExpression(expression,ctx);
+                return Mvvm.executeExpression(expression, ctx);
             }
-            , valueAccessor = function($el,expression,binder){
-                return function(){
-                    return executeExpression( expression , $el ,binder );
+            , valueAccessor = function ($el, expression, binder) {
+                return function () {
+                    return executeExpression(expression, $el, binder);
                 };
             }
-            , selector = function(){
-                return avril.object(binders).keys().select(function(key){
-                    return '['+Mvvm.defaults.attr_pre+'-'+key+']'
-                }).join(',');
+            , _generateSelector = function () {
+                return avril.array(avril.object(binders).keys()).select(function (key) {
+                    return '[' + Mvvm.defaults.attr_pre + '-' + key + ']'
+                }).value().join(',');
             }
-            , binderSelector = function(name){
-                return '['+binderName(name)+']'
+            , binderSelector = function (name) {
+                return '[' + binderName(name) + ']'
             }
-            , initElement = function( el , force ) {
+            , initElement = function (el, force) {
                 var $el = $(el);
-                if(!Mvvm.elementExists($el)){
+                if (!Mvvm.elementExists($el)) {
                     return true;
                 }
-                var stopAttrSelector = '['+binderName('stop')+']';
-                if($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length){
+                var stopAttrSelector = '[' + binderName('stop') + ']';
+                if ($el.is(stopAttrSelector) || $el.parents(stopAttrSelector).length) {
                     return true;
                 }
-                if(initedElementCacher($el) && !force){
+                if (initedElementCacheProvider($el) && !force) {
                     return true;
                 }
 
-                initedElementCacher($el, true);
+                initedElementCacheProvider($el, true);
 
-                if($el.attr(binderName('delay')) === 'false'){
+                if (Mvvm.defaults.force_delay === false || $el.attr(binderName('delay')) === 'false') {
                     initElementBinderDependency($el);
-                }else{
-                    nextTick(function(){ Mvvm.elementExists($el) && initElementBinderDependency($el); });
+                } else {
+                    nextTick(function () {
+                        Mvvm.elementExists($el) && initElementBinderDependency($el);
+                    });
                 }
             }
-            , initElementBinderDependency = function(){
+            , initElementBinderDependency = function () {
                 var nsCache = {}
-                    , getOldNs = function($el){
+                    , getOldNs = function ($el) {
                         return nsCache[ getHash($el) ];
                     }
-                    , cacheNs = function($el, ns){
+                    , cacheNs = function ($el, ns) {
                         nsCache[$el] = ns;
                     }
-                    , removeOldSubscribe = function(subscribeChanel, $el, oldNs){
-                        getEventChannel(subscribeChanel).remove(function(eventObj){
-                            if(eventObj && eventObj.data && eventObj.data.$el && eventObj.data.ns){
+                    , removeOldSubscribe = function (subscribeChanel, $el, oldNs) {
+                        avril.array(getEventChannel(subscribeChanel)).remove(function (eventObj) {
+                            if (eventObj && eventObj.data && eventObj.data.$el && eventObj.data.ns) {
                                 return eventObj.data.$el.is($el) && eventObj.data.ns == oldNs;
                             }
                             return false;
                         });
                     };
-                return function($el){
+                return function ($el) {
                     var binders = getBinders($el);
                     var ns = getNs($el);
-                    for(var bName in binders){
+                    for (var bName in binders) {
                         var expression = $el.attr(binderName(bName));
-                        var dependencies = initDependency(expression , $el , bName ,ns , getOldNs($el), removeOldSubscribe);
-                        binders[bName].init($el, valueAccessor($el,expression,bName),{
-                            expression: expression
-                            , ns: ns
-                            , dependencies: dependencies
+                        var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
+                        binders[bName].init($el, valueAccessor($el, expression, bName), {
+                            expression: expression, ns: ns, dependencies: dependencies
                         });
                     }
                     cacheNs($el, ns);
                 }
             }()
-            , initDependency = function(expression, $el, binder , ns , oldNs , removeOldSubscribe){
+            , initDependency = function (expression, $el, binder, ns, oldNs, removeOldSubscribe) {
                 var parsedExpressionStr = parseExpression(expression);
                 var counter = 0;
-                var subscribeDependency = function(absNs, dependenPath){
-                    self.subscribe(absNs, function(newValue,oldValue,options){
-                        if(!Mvvm.elementExists($el)){
-                            if($el.is(binderDataName('each-item'))){
+                var subscribeDependency = function (absNs, dependenPath) {
+                    self.subscribe(absNs, function (newValue, oldValue, options) {
+                        if (!Mvvm.elementExists($el)) {
+                            if ($el.is(binderDataName('each-item'))) {
 
                             }
                             return 'removeThis';
                         }
-                        if(dependenPath || (newValue != oldValue)){
-                            updateElement($el, $.extend( options , { dependencies: dependenPath , oldValue: oldValue, newValue: newValue } ), binder);
+                        if (dependenPath || (newValue != oldValue)) {
+                            updateElement($el, $.extend(options, { dependencies: dependenPath, oldValue: oldValue, newValue: newValue }), binder);
                         }
                     }, {
-                        binder: binder
-                        , $el: $el
-                        , ns: ns
+                        binder: binder, $el: $el, ns: ns
                     });
-                    Mvvm.devInfo($el, 'watch-'+binder+'-'+(counter++) , absNs );
+                    Mvvm.devInfo($el, 'watch-' + binder + '-' + (counter++), absNs);
                 };
                 subscribeDependency(ns);
-                var watchers = findExpressionDependency(parsedExpressionStr,function(watchPath){
-                    if(watchPath){
-                        var absNs = resolveAbsNs(binder !== 'scope'? ns : getNs($el.parent()) , watchPath);
+                var watchers = findExpressionDependency(parsedExpressionStr, function (watchPath) {
+                    if (watchPath) {
+                        var absNs = resolveAbsNs(binder !== 'scope' ? ns : getNs($el.parent()), watchPath);
                         subscribeDependency(absNs, watchPath);
-                        if(oldNs){
-                            removeOldSubscribe( resolveAbsNs(oldNs, watchPath) , $el , oldNs );
+                        if (oldNs) {
+                            removeOldSubscribe(resolveAbsNs(oldNs, watchPath), $el, oldNs);
                         }
                     }
                 });
                 return watchers;
             }
-            , updateElement = function(el, updateOptions, binder){
+            , updateElement = function (el, updateOptions, binder) {
                 var $el = $(el);
                 var binders = getBinders($el);
                 var expression = $el.attr(binderName(binder));
-                binders[binder].update($el, valueAccessor($el,expression,binder), $.extend(true,{},updateOptions,{
-                    expression: expression
-                    , binder: binder
-                    , ns: getNs($el)
+                binders[binder].update($el, valueAccessor($el, expression, binder), $.extend(true, {}, updateOptions, {
+                    expression: expression, binder: binder, ns: getNs($el)
                 }));
             }
-            , _isExpressionTextNodeReg = /\{\{.+?\}\}/g
-            , initTextNode = function($el, onFind){
-                var arr = [];
-                $el.find('*').each(function(){
-                    for(var i= 0; i<this.childNodes.length;i++){
-                        var n = this.childNodes[i];
-                        if( n.nodeType === 3
-                            && n.nodeValue
-                            && !n.inited
-                            && _isExpressionTextNodeReg.test(n.nodeValue)
-                            ) {
-                            arr.push( this.childNodes[i] );
-                            onFind(this.childNodes[i]);
-                        }
-                    }
-                }) ;
-                return arr;
-            }
-            , _eventPre = 'ave_' + config.guid
-            , getSubscribeEvents = function(){
+            , _eventPre = 'ave_'
+            , getSubscribeEvents = function () {
                 var results = [];
-                for(var k in avril.event.events){
-                    k.indexOf(_eventPre) === 0 && results.push(k.replace(_eventPre+'_','') )
+                for (var k in avril.event.events) {
+                    k.indexOf(_eventPre) === 0 && results.push(k.replace(_eventPre + '_', ''))
                 }
                 return results;
             }
-            , getEventChannel = function(subscribePath){
-                return avril.event.get(subscribePath,_eventPre);
+            , getEventChannel = function (subscribePath) {
+                subscribePath = _standardiseNs(subscribePath);
+                return avril.event.get(subscribePath, _eventPre);
             }
-            , _optName = function(opt){ return '__$$__' + config.guid + '__$$__' + opt; }
-            , optEventName = function(ns,opt){ return ns + '.' + _optName(opt); }
-            , getOptEventChannel = function(ns, opt){
-                return getEventChannel( optEventName(ns, opt) );
+            , _optName = function (opt) {
+                return '__$$__' + config.guid + '__$$__' + opt;
             }
-            , addBinderClass = function($el, binder){
+            , optEventName = function (ns, opt) {
+                return ns + '.' + _optName(opt);
+            }
+            , getOptEventChannel = function (ns, opt) {
+                return getEventChannel(optEventName(ns, opt));
+            }
+            , addBinderClass = function ($el, binder) {
                 var css = binderName(binder) + '-css';
                 $el.addClass(css);
             }
-            , nextTick = function(func){
-                setTimeout(func,1);
+            , nextTick = function (func) {
+                setTimeout(func, 1);
             }
-            , bindGlobal = function(){
+            , bindGlobal = function () {
                 var binded = false;
-                return function(){
-                    if(binded ){
+                return function () {
+                    if (binded) {
                         return true;
                     }
                     binded = true;
                     var attrPre = Mvvm.defaults.attr_pre;
                     var mvvm = avril.mvvm;
-                    $(document).on(Mvvm.defaults.trigger_events, mvvm.selector ,function(){
+                    $(document).on(Mvvm.defaults.trigger_events, mvvm.selector, function () {
                         var $el = $(this);
-                        if($el.is(mvvm.selector) && $el.is('input,textarea,select')){
+                        if ($el.is(mvvm.selector) && $el.is('input,textarea,select') && $el.attr(binderName('bind')) && getSimpleReg().test($el.attr(binderName('bind')))) {
                             var absPath = mvvm.getAbsNs($el);
                             mvvm.setVal(absPath, $el.val(), $el);
                         }
                     });
-                    $('html').attr(attrPre+'-scope','$root').addClass('av-mvvm');
+                    $('html').attr(attrPre + '-scope', '$root').addClass('av-mvvm');
                 }
             }()
+            , _standardiseNs = function (ns) {
+                var avObjExecPropArr = avril.object._getExecPropArr(ns);
+                return avril.array(avObjExecPropArr).select(function (execArr, index) {
+                    var prop = avril.object._getPropFromExecArr(execArr);
+                    if (execArr[1]) {
+                        return '[' + prop + ']';
+                    } else if (execArr[2]) {
+                        return '[\'' + prop + '\']'
+                    }
+
+                    return '[\'' + prop + '\']'
+                }).value().join('');
+            }
             ;
 
-        this.selector = selector();
+        this.selector = _generateSelector();
 
-        this.addBinder = function(name,binder, expressionParser){
-            if(typeof binder == 'function'){
+        this.addBinder = function (name, binder, expressionParser) {
+            if (typeof binder == 'function') {
                 binder = {
-                    init:binder
-                    , update:binder
+                    init: binder, update: binder
                 }
             }
-            if(!binder.update){
-                binder.update = function(){};
+            if (!binder.update) {
+                binder.update = function () {
+                };
             }
-            if(!binder.init){
-                binder.init = function(){};
+            if (!binder.init) {
+                binder.init = function () {
+                };
             }
             expressionParser = expressionParser || binder.expressionParser;
-            if(avril.isFunc(expressionParser)) {
+            if (avril.isFunc(expressionParser)) {
                 expressionParser = expressionParser.bind(binder);
             }
             binders[name] = {
-                init: binder.init.bind(binder)
-                , update: binder.update.bind(binder)
-                , expressionParser: expressionParser
+                init: binder.init.bind(binder), update: binder.update.bind(binder), expressionParser: expressionParser
             };
-            this.selector = selector();
+            this.selector = _generateSelector();
         };
 
-        this.addExpressionParser = function(parser, binder){
-            if(!binder){
+        this.addExpressionParser = function (parser, binder) {
+            if (!binder) {
                 expressionParsers.push(parser);
-            }else{
+            } else {
                 expressionParsers.binders = expressionParsers.binders || {};
                 expressionParsers.binders[binder] = expressionParsers.binders[binder] || [];
                 expressionParsers.binders[binder].push(parser);
             }
         };
 
-        this.addMagic = function(name, func, binder) {
-            if(!name || name.indexOf('$')!= 0 ){
+        this.addMagic = function (name, func, binder) {
+            if (!name || name.indexOf('$') != 0) {
                 throw "Magic method's name should start with '$'";
             }
-            if(!binder){
+            if (!binder) {
                 magics.global[name] = func;
-            }else{
-                if( !magics.binders[binder]){
+            } else {
+                if (!magics.binders[binder]) {
                     magics.binders[binder] = {};
                 }
                 magics.binders[binder][name] = func;
             }
         };
 
-        var _bindDom = function($el){
+        var _bindDom = function ($el) {
 
             !$el.is('html') && initElement($el);
 
-            $el.find(self.selector).each(function(i){
+            $el.find(self.selector).each(function (i) {
                 initElement(this);
             });
 
         }.bind(this);
 
-        this.bindDom = function(el, forceDelay){
+        this.bindDom = function (el, forceDelay) {
             bindGlobal();
-            var $el = !el || el === document?  $('html') : $(el);
+            var $el = !el || el === document ? $('html') : $(el);
 
-            if(forceDelay === true){
-                return nextTick(function(){ _bindDom($el) })
-            }else if( forceDelay === false ){
+            if (forceDelay === true) {
+                return nextTick(function () {
+                    _bindDom($el)
+                })
+            } else if (forceDelay === false) {
                 return _bindDom($el);
             }
 
             //optimise the speed
-            $el.attr(binderName('delay')) === 'false' ?
-                _bindDom($el) : nextTick(function(){ _bindDom($el) });
+            Mvvm.defaults.force_delay === false || $el.attr(binderName('delay')) === 'false' ?
+                _bindDom($el) : nextTick(function () {
+                _bindDom($el)
+            });
         };
 
-        this.setVal = function(ns, value , $sourceElement, silent) {
+        this.setVal = function (ns, value, $sourceElement, silent) {
+            ns = resolveAbsNs('$root', ns);
             var oldValue = avril.object(_rootScopes).tryGetVal(ns);
-            if(oldValue != value){
-                if(value){
-                    if(typeof(value) ==='string' &&  !isNaN(value)){
+            if (oldValue != value) {
+                if (value) {
+                    if (typeof(value) === 'string' && !isNaN(value)) {
                         value = Number(value);
                     }
                 }
-                avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/,''), value);
+                avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/, ''), value);
                 !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns } ]);
             }
         };
 
-        this.array = function(ns, $el) {
+        this.array = function (ns, $el) {
+            ns = resolveAbsNs('$root', ns);
             var array = this.getVal(ns);
-            if(!(array instanceof  Array)){
+            if (!(array instanceof  Array)) {
                 array = [];
                 this.setVal(ns, array, $el);
             }
             var options = {
                     sourceElement: $el
                 }
-                , triggerLengthChange = function(newLength,oldLength){
-                    getEventChannel(ns+'.length')([ newLength,oldLength, { sourceElement: $el, channel:ns } ]);
+                , triggerLengthChange = function (newLength, oldLength) {
+                    getEventChannel(ns + '.length')([ newLength, oldLength, { sourceElement: $el, channel: ns } ]);
                 }
-                , triggerIndexChange = function(){
+                , triggerIndexChange = function () {
                     events.indexChange([]);
                 }
                 , api = {
-                    add: function(item){
+                    add: function (item) {
                         array.push(item);
                         getOptEventChannel(ns, 'add')([item, { guid: guid() }]);
                         triggerLengthChange(array.length, array.length - 1);
-                    }
-                    , remove: function(item){
-                        this.removeAt( array.indexOf(item) );
-                    }
-                    , removeAt: function(index){
+                    }, remove: function (item) {
+                        this.removeAt(array.indexOf(item));
+                    }, removeAt: function (index) {
                         var item = array[index];
-                        array.removeAt(index);
+                        avril.array(array).removeAt(index);
                         getOptEventChannel(ns, 'remove')([ item, index, { guid: guid() } ]);
                         triggerLengthChange(array.length, array.length - 1);
                         triggerIndexChange();
-                    }
-                    , concat: function(items){
-                        for(var i=0;i++;i<items.length){
+                    }, concat: function (items) {
+                        for (var i = 0; i++; i < items.length) {
                             array.push(items[i]);
                         }
-                        getOptEventChannel(ns,'concat')([items, { guid: guid() }]);
+                        getOptEventChannel(ns, 'concat')([items, { guid: guid() }]);
                         triggerLengthChange(array.length, array.length - items.length);
                     }
                 }
-                , events = function(){
+                , events = function () {
                     var e = {
 
                         }
-                        , addEvent = function(opt){
-                            e[opt] = function(){
-                                if(typeof arguments[0] === 'function'){
+                        , addEvent = function (opt) {
+                            e[opt] = function () {
+                                if (typeof arguments[0] === 'function') {
                                     getOptEventChannel(ns, opt)(arguments[0], { $el: $el, ns: ns });
-                                }else{
+                                } else {
                                     getOptEventChannel(ns, opt)(arguments[0]);
                                 }
                             };
                         };
                     addEvent('indexChange');
-                    for(var k in api){
+                    for (var k in api) {
                         addEvent(k);
                     }
                     return e;
@@ -2573,91 +2552,89 @@
             return api;
         };
 
-        this.getVal = function(ns){
+        this.getVal = function (ns) {
+            ns = resolveAbsNs('$root', ns);
             return avril.object(_rootScopes).tryGetVal(ns);
         };
 
-        this.subscribe = function(ns, func,options){
+        this.subscribe = function (ns, func, options) {
             var nsArr = ns.split(',');
-            nsArr.each(function(scope){
+            avril.array(nsArr).each(function (scope) {
                 var ctx = {
-                    subscribes:nsArr
-                    , subscribeStr: ns
-                    , current: scope
-                    , values: function(func){
-                        var values = this.subscribes.select(function(ns){
+                    subscribes: nsArr, subscribeStr: ns, current: scope, values: function (func) {
+                        var values = avril.array(this.subscribes).select(function (ns) {
                             return self.getVal(ns);
-                        });
+                        }).value();
                         func && func.apply(this, values);
                         return values
                     }
                 };
-                getEventChannel(scope)(func,options,ctx);
+                getEventChannel(scope)(func, options, ctx);
             });
         };
 
-        var getEachScope = function($el){
+        var getEachScope = function ($el) {
             $el = $($el);
             var eachScopeName = 'each-scope'
                 , eachScopeBinderDataName = binderDataName(eachScopeName)
                 , eachScopeBinder = $el.attr(binderName('each'));
 
-            if(eachScopeBinder && getSimpleReg().test(eachScopeBinder)){
-                return eachScopeBinder.replace(/^\$scope(\.)?/,'');
+            if (eachScopeBinder && getSimpleReg().test(eachScopeBinder)) {
+                return eachScopeBinder.replace(/^\$scope(\.)?/, '');
             }
 
-            return $el.data( eachScopeBinderDataName );
+            return $el.data(eachScopeBinderDataName);
         };
 
-        this.getNs = function($el){
+        this.getNs = function ($el) {
             var fullNs = ''
                 , scopeBinderName = binderName('scope')
                 , scopeBinderDataName = binderDataName('scope')
-                , $parents = $el.parents('['+scopeBinderName+'],['+binderName('each')+']')
+                , $parents = $el.parents('[' + scopeBinderName + '],[' + binderName('each') + ']')
                 , eachScope = getEachScope($el)
-                , isPropVisit = function(ns){
+                , isPropVisit = function (ns) {
                     return ns.indexOf('[') === 0;
                 };
 
-            if($el.attr( scopeBinderName )){
+            if ($el.attr(scopeBinderName)) {
                 fullNs = $el.data(scopeBinderDataName) || $el.attr(scopeBinderName);
             }
 
-            if(eachScope){
+            if (eachScope) {
                 fullNs = eachScope;
             }
 
-            if(fullNs.indexOf('$root.') == 0){
+            if (fullNs.indexOf('$root.') == 0) {
                 return fullNs;
             }
 
-            $parents.each(function(){
+            $parents.each(function () {
                 var $parent = $(this)
                     , eachScope = getEachScope($parent)
                     , parentNs;
-                if($parent.attr(scopeBinderName)){
+                if ($parent.attr(scopeBinderName)) {
                     parentNs = ($parent.data(scopeBinderDataName) || $parent.attr(scopeBinderName));
                 }
 
-                if(eachScope){
+                if (eachScope) {
                     parentNs = eachScope;
                 }
 
-                if(parentNs){
-                    fullNs = parentNs + ( !isPropVisit(fullNs) && fullNs ?  '.' : '' ) + fullNs;
+                if (parentNs) {
+                    fullNs = parentNs + ( !isPropVisit(fullNs) && fullNs ? '.' : '' ) + fullNs;
                 }
 
 
-                if(fullNs.indexOf('$root') >= 0){
+                if (fullNs.indexOf('$root') >= 0) {
                     return false;
                 }
             });
 
-            fullNs = fullNs.replace(/\.$/g,'');
+            fullNs = fullNs.replace(/\.$/g, '');
 
-            Mvvm.devInfo($el,'scope',fullNs);
+            Mvvm.devInfo($el, 'scope', fullNs);
 
-            $el.data(binderName('ns'),fullNs);
+            $el.data(binderName('ns'), fullNs);
 
             return fullNs;
         };
@@ -2666,35 +2643,37 @@
 
         var getNs = this.getNs.bind(this);
 
-        this.getAbsNs = function($el, binder){
+        this.getAbsNs = function ($el, binder) {
             var ns = this.getNs($el);
             var relativeNs = $el.attr(binderName(binder || 'bind'));
-            return resolveAbsNs(ns,relativeNs);
+            return resolveAbsNs(ns, relativeNs);
         };
 
-        this.getRootScope = function(){
+        this.resolveAbsNs = resolveAbsNs;
+
+        this.getRootScope = function () {
             return $.extend(true, {}, _rootScopes.$root);
         };
 
         var addBinder = this.addBinder.bind(this)
-            ,addExpressionParser = this.addExpressionParser.bind(this)
-            ,addMagic = this.addMagic.bind(this);
+            , addExpressionParser = this.addExpressionParser.bind(this)
+            , addMagic = this.addMagic.bind(this);
 
-        addBinder('scope',function($el,value,options){
+        addBinder('scope', function ($el, value, options) {
             var expression = options.expression;
-            if(!getSimpleReg().test(expression)){
+            if (!getSimpleReg().test(expression)) {
                 expression = parseExpression(expression);
                 var executeResult = executeExpression(expression, $el.parent());
-                if(typeof  executeResult !== 'string'){
-                    throw new Error('invalid scope value.', $el.selector+':'+$el[0].outerHTML);
+                if (typeof  executeResult !== 'string') {
+                    throw new Error('invalid scope value.', $el.selector + ':' + $el[0].outerHTML);
                 }
-                var dependencies = findExpressionDependency( expression );
+                var dependencies = findExpressionDependency(expression);
                 var scopeDataName = binderDataName('scope');
-                if(dependencies && dependencies.length || !$el.data(scopeDataName) ){
-                    if(executeResult !== $el.data(scopeDataName)){
+                if (dependencies && dependencies.length || !$el.data(scopeDataName)) {
+                    if (executeResult !== $el.data(scopeDataName)) {
                         $el.data(scopeDataName, executeResult);
-                        getNs($el,true);
-                        initElement( $el , true );
+                        getNs($el, true);
+                        initElement($el, true);
                         return false;
                     }
                 }
@@ -2702,125 +2681,123 @@
         });
 
         addBinder('if', {
-            init:function($el,value){
+            init: function ($el, value) {
                 value = value();
                 var html = $el.html();
-                htmlCacher($el, html);
-                if(!value){
+                htmlCacheProvider($el, html);
+                if (!value) {
                     $el.html('');
                 }
-            }
-            , update: function($el,value){
-                var html = htmlCacher($el);
-                if(value()){
+            }, update: function ($el, value) {
+                var html = htmlCacheProvider($el);
+                if (value()) {
                     $el.html(html);
                     self.bindDom($el);
-                }else{
+                } else {
                     $el.html('');
                 }
             }
         });
 
         addBinder('visibleIf', {
-            init: function($el,value){
-                addBinderClass($el,'visible-if');
+            init: function ($el, value) {
+                addBinderClass($el, 'visible-if');
                 binders['if'].init($el, value);
-                binders.visible.init($el,value);
-            }
-            , update: function($el,value){
+                binders.visible.init($el, value);
+            }, update: function ($el, value) {
                 binders['if'].update($el, value);
-                binders.visible.update($el,value);
+                binders.visible.update($el, value);
             }
         });
 
-        addBinder('bind',function($el,value, options){
-            if(options.sourceElement && $el.is(options.sourceElement)){
-                if($el.is('input,select,textarea')){
+        addBinder('bind', function ($el, value, options) {
+            if (options.sourceElement && $el.is(options.sourceElement)) {
+                if ($el.is('input,select,textarea')) {
                     return false;
                 }
             }
             var val = value();
-            if($el.is('input')) {
-                if($el.is(':checkbox') || $el.is(':radio')){
-                    $el.attr('checked' , $el.val() === val );
-                }else{
+            if ($el.is('input')) {
+                if ($el.is(':checkbox') || $el.is(':radio')) {
+                    $el.attr('checked', $el.val() === val);
+                } else {
                     $el.val(val);
                 }
-            } else if($el.is('textarea') || $el.is('select')){
-                $el.val( val );
-            } else if(!$el.attr(binderName('text')) && !$el.attr( binderName('html') )){
+            } else if ($el.is('textarea') || $el.is('select')) {
+                $el.val(val);
+            } else if (!$el.attr(binderName('text')) && !$el.attr(binderName('html'))) {
                 $el.text(val);
             }
         });
 
         addBinder('each', {
-            init: function($el,value, options){
-                if(!htmlCacher($el)){
-                    this.getTemplateSource($el).attr(binderName('stop'),'true');
-                    htmlCacher($el, $el.html());
+            init: function ($el, value, options) {
+                if (!htmlCacheProvider($el)) {
+                    this.getTemplateSource($el).attr(binderName('stop'), 'true');
+                    htmlCacheProvider($el, $el.html());
                     $el.html('')
                 }
                 var isSimpleExpression = getSimpleReg().test(options.expression);
-                if(!isSimpleExpression){
-                    var vScope = '$root.av_'+guid();
+                if (!isSimpleExpression) {
+                    var vScope = '$root.av_' + guid();
                     var eachScope = getEachScope($el);
-                    if(!eachScope){
-                        $el.data( binderDataName('each-scope') , vScope  );
+                    if (!eachScope) {
+                        $el.data(binderDataName('each-scope'), vScope);
                         initElement($el, true);
                         return false;
                     }
                 }
-                this.renderItems($el,value);
+                this.renderItems($el, value);
 
-                if(isSimpleExpression)
-                    this.subscribeArrayEvent($el,options);
+                if (isSimpleExpression)
+                    this.subscribeArrayEvent($el, options);
             }
-            , update: function($el,value,options){
-                if(options.sourceElement && $el.is(options.sourceElement)){
+            , update: function ($el, value, options) {
+                if (options.sourceElement && $el.is(options.sourceElement)) {
                     return false;
                 }
-                $el.html(htmlCacher($el));
-                this.renderItems($el,value);
+                $el.html(htmlCacheProvider($el));
+                this.renderItems($el, value);
             }
-            , subscribeArrayEvent: function($el){
+            , subscribeArrayEvent: function ($el) {
                 var binder = this;
                 var ns = getNs($el);
                 var arrayEvents = self.array(ns, $el).events;
-                arrayEvents.add(function(){
-                    binder.addItem($el, self.getVal(ns) );
+                arrayEvents.add(function () {
+                    binder.addItem($el, self.getVal(ns));
                 });
-                arrayEvents.remove(function(data,index, args){
-                    binder.removeItem($el, data , index , args);
+                arrayEvents.remove(function (data, index, args) {
+                    binder.removeItem($el, data, index, args);
                 });
-                arrayEvents.concat(function(){
+                arrayEvents.concat(function () {
 
                 });
-                arrayEvents.indexChange(function(){
+                arrayEvents.indexChange(function () {
 
                 });
             }
-            , renderItems: function($el,value){
+            , renderItems: function ($el, value) {
                 var items = value();
-                if(!items || !(items instanceof Array)){
+                if (!items || !(items instanceof Array)) {
                     items = [];
                 }
-                self.setVal( getNs($el), items ,$el );
-                $el.html(htmlCacher($el));
-                $el.data(binderName(this.itemTemplateDataName),null);
+                self.setVal(getNs($el), items, $el);
+                $el.html(htmlCacheProvider($el));
+                $el.data(binderName(this.itemTemplateDataName), null);
                 var binder = this;
                 var guid = 'guid_' + avril.guid();
-                var replaceMement = '<i>'+guid+'</i>';
+                var replaceMement = '<i>' + guid + '</i>';
                 var $start = this.getStart(this.getTemplateSource($el));
 
-                var itemTemplateHtml = binder.generateItem($el).attr(binderName('scope'),'[{scope}]')
-                    .toArray()
-                    .select(function(o){
+                var itemTemplateHtml = avril.array(
+                    binder.generateItem($el).attr(binderName('scope'), '[{scope}]').toArray()
+                ).select(function (o) {
                         return o.outerHTML;
-                    }).join('');
+                    }).value().join('');
 
-                var itemsHtml = items.select(function(item, index){
-                    return itemTemplateHtml.replace(/\[\{scope\}\]/g,'['+index+']');
-                }).join('');
+                var itemsHtml = avril.array(items).select(function (item, index) {
+                    return itemTemplateHtml.replace(/\[\{scope\}\]/g, '[' + index + ']');
+                }).value().join('');
 
                 $start.after(replaceMement);
 
@@ -2829,35 +2806,36 @@
 
                 $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
 
-                self.bindDom($el, $el.attr(binderName('delay')) !== 'false' );
-                
+                self.bindDom($el, $el.attr(binderName('delay')) !== 'false');
+
             }
-            , getStart : function($el){
-                if($el.length == 1){
+            , getStart: function ($el) {
+                if ($el.length == 1) {
                     return $el;
                 }
-                else{
+                else {
                     return $el.last();
                 }
             }
-            , eachItemAttrName :binderName('each-item')
+            , eachItemAttrName: binderName('each-item')
             , itemTemplateDataName: 'av-each-item-template'
-            , getOrgSourceEl : function($el){
+            , getOrgSourceEl: function ($el) {
                 var itemAttrName = this.eachItemAttrName;
                 var $itemTemplate = $el.children('[' + itemAttrName + '=true]');
-                if($itemTemplate.length == 0){
-                    $itemTemplate = $el.children().attr(itemAttrName,'true');
+                if ($itemTemplate.length == 0) {
+                    $itemTemplate = $el.children().attr(itemAttrName, 'true');
                 }
                 return $itemTemplate;
             }
-            , getTemplateSource : function($el) {
-                if($el.data(binderName(this.itemTemplateDataName))){
+            , getTemplateSource: function ($el) {
+                if ($el.data(binderName(this.itemTemplateDataName))) {
                     return $el.data(binderName(this.itemTemplateDataName));
                 }
-                var itemAttrName = this.eachItemAttrName;
+
                 var $itemTemplate = this.getOrgSourceEl($el);
-                function addGroupId(){
-                    $(this).attr( binderName('each-item-group-id'), getHash(this) );
+
+                function addGroupId() {
+                    $(this).attr(binderName('each-item-group-id'), getHash(this));
                 }
 
                 $itemTemplate.find(self.selector).each(addGroupId);
@@ -2867,57 +2845,57 @@
                 $el.data(binderName(this.itemTemplateDataName), $itemTemplate);
                 return $itemTemplate.hide();
             }
-            , getLastEl: function($el) {
+            , getLastEl: function ($el) {
                 var itemAttrName = this.eachItemAttrName;
-                var $itemEl = $el.find('['+itemAttrName+'="generated"]');
-                if($itemEl.length==0){
+                var $itemEl = $el.children('[' + itemAttrName + '="generated"]');
+                if ($itemEl.length == 0) {
                     return this.getOrgSourceEl($el);
                 }
-                return $itemEl.length==1? $itemEl : $itemEl.last() ;
+                return $itemEl.length == 1 ? $itemEl : $itemEl.last();
             }
-            , getItemByDataIndex: function($el, index){
-                return $el.children( '['+ this.eachItemAttrName + '="generated"][av-scope="['+index+']"]' );
+            , getItemByDataIndex: function ($el, index) {
+                return $el.children('[' + this.eachItemAttrName + '="generated"][av-scope="[' + index + ']"]');
             }
-            , addItem: function($el, array) {
+            , addItem: function ($el, array) {
                 var $lastEl = this.getLastEl($el);
                 var $newItem = this.generateItem($el);
-                $newItem.attr( binderName('scope') , '['+(array.length -1) +']' );
+                $newItem.attr(binderName('scope'), '[' + (array.length - 1) + ']');
                 $lastEl.after($newItem);
                 self.bindDom($newItem);
             }
-            , removeItem: function($el, data,index, args) {
+            , removeItem: function ($el, data, index, args) {
                 var $elToRemove = this.getItemByDataIndex($el, index)
-                    , $siblings = $elToRemove.nextAll( '['+ this.eachItemAttrName + '="generated"][av-scope!="['+index+']"]' )
-                    , ns = getNs($el)
+                    , $siblings = $elToRemove.nextAll('[' + this.eachItemAttrName + '="generated"][av-scope!="[' + index + ']"]')
+                    , ns = _standardiseNs(getNs($el))
                     , changeSubscribeEvents = function () {
                         var allEvents = getSubscribeEvents();
-                        allEvents.each(function(currentEventPath){
-                           if( currentEventPath.indexOf(ns) === 0 ){
-                               var eventPathName = currentEventPath.replace(ns,'');
-                               var exec = /^\[(\d+)\]/.exec(eventPathName)
-                                   , i = exec && exec[1];
-                               if(exec && i !== undefined){
-                                   i = parseInt(i) ;
-                                   if(i >= index){
-                                       var nextEventPath = eventPathName.replace('['+i+']','['+(i+1)+']')
-                                           , nextEventName = _eventPre  + '_' + ns + nextEventPath
-                                           , currentEventName =  _eventPre  + '_' + currentEventPath
-                                           , nextEvents = avril.event.events[nextEventName];
-                                       if(nextEvents){
-                                           avril.event.events[currentEventName] = nextEvents;
-                                       }else{
-                                           delete  avril.event.events[currentEventName];
-                                       }
-                                   }
-                               }
-                           }
+                        avril.array(allEvents).each(function (currentEventPath) {
+                            if (currentEventPath.indexOf(ns) === 0) {
+                                var eventPathName = currentEventPath.replace(ns, '');
+                                var exec = /^\[(\d+)\]/.exec(eventPathName)
+                                    , i = exec && exec[1];
+                                if (exec && i !== undefined) {
+                                    i = parseInt(i);
+                                    if (i >= index) {
+                                        var nextEventPath = eventPathName.replace('[' + i + ']', '[' + (i + 1) + ']')
+                                            , nextEventName = _eventPre + '_' + ns + nextEventPath
+                                            , currentEventName = _eventPre + '_' + currentEventPath
+                                            , nextEvents = avril.event.events[nextEventName];
+                                        if (nextEvents) {
+                                            avril.event.events[currentEventName] = nextEvents;
+                                        } else {
+                                            delete  avril.event.events[currentEventName];
+                                        }
+                                    }
+                                }
+                            }
                         });
                     }
-                    , adjustSiblingsOrder = function(){
-                        $siblings.each(function(){
+                    , adjustSiblingsOrder = function () {
+                        $siblings.each(function () {
                             var $s = $(this);
-                            var sIndex = /\[(\d+)\]/.exec( $s.attr( binderName('scope') ) )[1] - 1;
-                            $s.attr( binderName('scope') , '['+ sIndex +']');
+                            var sIndex = /\[(\d+)\]/.exec($s.attr(binderName('scope')))[1] - 1;
+                            $s.attr(binderName('scope'), '[' + sIndex + ']');
                         });
                     };
                 $elToRemove.remove();
@@ -2925,68 +2903,59 @@
                 args._eventAdjusted = true;
                 adjustSiblingsOrder();
             }
-            , generateItem : function($el) {
+            , generateItem: function ($el) {
                 return this.getTemplateSource($el).clone()
-                    .removeAttr(binderName('stop')).attr(this.eachItemAttrName,"generated")
+                    .removeAttr(binderName('stop')).attr(this.eachItemAttrName, "generated")
                     .show();
             }
         });
 
-        addBinder('text',function($el,value){
+        addBinder('text', function ($el, value) {
             $el.text(value());
         });
 
-        addBinder('html', function($el, value){
+        addBinder('html', function ($el, value) {
             $el.html(value());
         });
 
-        addBinder('visible',function($el,value){
-            addBinderClass($el,'visible');
-            value()? $el.show() : $el.hide();
+        addBinder('visible', function ($el, value) {
+            addBinderClass($el, 'visible');
+            value() ? $el.show() : $el.hide();
         });
 
-        addBinder('template',{
-            init: function($el, value){
-                this.render.apply(this,arguments);
-            }
-            , update: function($el, value){
-                this.render.apply(this,arguments);
-            }
-            , render: function($el, value, options){
-                var url = this.getTemplateUrl.apply(this,arguments);
-                this.getTemplate(url, function(tmplStr){
+        addBinder('template', {
+            init: function ($el, value) {
+                this.render.apply(this, arguments);
+            }, update: function ($el, value) {
+                this.render.apply(this, arguments);
+            }, render: function ($el, value, options) {
+                var url = this.getTemplateUrl.apply(this, arguments);
+                this.getTemplate(url, function (tmplStr) {
                     $el.html(tmplStr);
                     self.bindDom($el);
                 });
-            }
-
-
-            , isUrl : function(url){
-                return this.urlReg.test('http://test.com' + (url.indexOf('/')===0? '' : '/') + url ) || urlReg.test(url);
-            }
-            , getTemplateUrl : function($el, value, options){
-                return value() || options.expression ;
-            }
-            , getTemplate: function(url,callback){
+            }, isUrl: function (url) {
+                return this.urlReg.test('http://test.com' + (url.indexOf('/') === 0 ? '' : '/') + url) || urlReg.test(url);
+            }, getTemplateUrl: function ($el, value, options) {
+                return value() || options.expression;
+            }, getTemplate: function (url, callback) {
                 var binder = this;
-                if(url.indexOf('#') === 0){
-                    return callback( $(url).html() );
+                if (url.indexOf('#') === 0) {
+                    return callback($(url).html());
                 }
-                if(this.isUrl(url)){
-                    if(this.cache[url]){
+                if (this.isUrl(url)) {
+                    if (this.cache[url]) {
                         return callback(this.cache[url]);
-                    }else{
+                    } else {
                         $.ajax({
-                            url:url
-                            , success: function(html){
+                            url: url, success: function (html) {
                                 binder.cache[url] = html;
                                 callback(binder.cache[url])
                             }
                         });
                     }
                 }
-            }
-            , cache:{
+            }, cache: {
 
             }
             // come from https://gist.github.com/dperini/729294
@@ -3026,187 +2995,197 @@
             )
         });
 
-        addBinder('attr',function($el,value){
+        addBinder('attr', function ($el, value) {
             value = value();
             $el.attr(value || {});
         });
 
-        addBinder('style',function($el,value){
+        addBinder('style', function ($el, value) {
             $el.css(value() || {});
         });
 
-        addBinder('css',function($el,value){
-            value = value()||{};
-            for(var k in value){
-                $el[value[k]? 'addClass':'removeClass'](k);
+        addBinder('css', function ($el, value) {
+            value = value() || {};
+            for (var k in value) {
+                $el[value[k] ? 'addClass' : 'removeClass'](k);
             }
         });
 
-        addBinder('func', function($el, value){
+        addBinder('func', function ($el, value) {
             var func = value();
-            if(avril.isFunc(func)){
+            if (avril.isFunc(func)) {
                 func($el);
             }
-        }, function(expression){
-            return expression+'.bind(this)';
+        }, function (expression) {
+            return expression + '.bind(this)';
         });
 
         addBinder('event', {
-            init: function($el,value){
+            init: function ($el, value) {
                 var events = value();
-                if(events) {
-                    for(var e in events) {
-                        $el.on( e, events[e] );
+                if (events) {
+                    for (var e in events) {
+                        $el.on(e, events[e]);
                     }
                 }
             }
         });
 
+        avril.array('click,dblclick,mousein,mouseout,change,blur,focus,keyup,keydown'.split(','))
+            .each(function (eventName) {
+                addBinder(eventName, {
+                    init: function ($el, value) {
+                        var eventFunc = value();
+                        if (eventFunc) {
+                            $el.on(eventName, function (e) {
+                                eventFunc(e, $el);
+                            });
+                        }
+                    }
+                });
+            });
+
         //add try expresion parser
-        addExpressionParser(function(expression){
-            var _tryReg = /\$(tryGet)\((.+?)\)/g;
-            if(_tryReg.test(expression)){
-                expression = expression.replace(_tryReg, function(match,method,arg){
-                    if(arg.indexOf('"') >=0 || arg.indexOf("'") >=0){
+        addExpressionParser(function (expression) {
+            var _tryReg = /\$(tryGet)\s*\(\s*([\$|\w|\'|\.|\"]+)\s*(\,\s*[\$|\w|\'|\"]+)*\s*\)/g;
+            if (_tryReg.test(expression)) {
+                expression = expression.replace(_tryReg, function (match, method, arg0, otherArg) {
+                    otherArg = otherArg === undefined ? '' : otherArg;
+                    if (arg0.indexOf('"') >= 0 || arg0.indexOf("'") >= 0) {
                         return match;
-                    }else{
-                        return '$'+ method +'("'+arg+'")';
+                    } else {
+                        return '$' + method + '("' + arg0 + '"' + otherArg + ')';
                     }
                 });
             }
             return expression;
         });
 
-        addMagic('$tryGet', function(val){
+        addMagic('$tryGet', function (val, defaultValue) {
             var $scope = this;
-            return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || '';
+            defaultValue = defaultValue === undefined ? '' : defaultValue;
+            return avril.object($scope).tryGetVal(val) || avril.object($scope.$root).tryGetVal(val) || defaultValue;
         });
 
         //add $scope or $root to simple expresion
-        addExpressionParser(function(expression){
-            if(getSimpleReg().test(expression) && !/^\d+/.test(expression)){
-                if(expression.indexOf('$root') == 0){
+        addExpressionParser(function (expression) {
+            if (getSimpleReg().test(expression) && !/^\d+/.test(expression)) {
+                if (expression.indexOf('$root') == 0) {
                     return expression;
                 }
-                if(expression.indexOf('$scope')<0){
-                    expression = '$scope.'+expression;
+                if (expression.indexOf('$scope') < 0) {
+                    expression = '$scope.' + expression;
                 }
             }
             return expression;
         });
 
-        addMagic('$guid', function(){
-            return 'av_guid'+ avril.guid().replace(/_/g,'');
+        addMagic('$guid', function () {
+            return 'av_guid' + avril.guid().replace(/_/g, '');
         });
 
-        addMagic('$randomScope', function(){
-            return '$root.rdm'+avril.guid().replace(/_/g,'');
+        addMagic('$randomScope', function () {
+            return '$root.rdm' + avril.guid().replace(/_/g, '');
         });
 
-        addMagic('$parent', function(selector){
+        addMagic('$parent', function (selector) {
             var $parent = selector ? this.$el.parents(selector).first()
                 : this.$el.parents(binderSelector('scope')).first();
 
             return getElScope($parent);
         });
 
-        addMagic('$setVal', function(relativePath, val){
-            self.setVal(resolveAbsNs(this.$ns, relativePath),val);
+        addMagic('$setVal', function (relativePath, val) {
+            self.setVal(resolveAbsNs(this.$ns, relativePath), val);
             return val;
         });
 
-        addMagic('$avArray', function(ns){
-            if(arguments.length ===0 ){
+        addMagic('$avArray', function (ns) {
+            if (arguments.length === 0) {
                 ns = this.$ns;
+            } else {
+                ns = resolveAbsNs(this.$ns, ns);
             }
-            return self.array(ns,this.$el);
+            return self.array(ns, this.$el);
         });
 
-        addMagic('$index', function(ns){
+        addMagic('$index', function () {
             var $el = this.$el;
 
-            while(!$el.is('[' + binderName('each-item') +']' ) && $el.length && !$el.is('body') ){
+            while (!$el.is('[' + binderName('each-item') + ']') && $el.length && !$el.is('body')) {
                 $el = $el.parent();
             }
 
-            if($el.length){
-                var scopeIndex = $el.attr( binderName('scope') );
-                var groupItems = $el.parent().children('['+binderName('scope')+'="'+scopeIndex+'"]');
-                var allSiblings = $el.parent().children('['+binderName('each-item')+'="generated"]');
-                if(groupItems.length==1){
+            if ($el.length) {
+                var scopeIndex = $el.attr(binderName('scope'));
+                var groupItems = $el.parent().children('[' + binderName('scope') + '="' + scopeIndex + '"]');
+                var allSiblings = $el.parent().children('[' + binderName('each-item') + '="generated"]');
+                if (groupItems.length == 1) {
                     return allSiblings.index($el);
-                }else if(groupItems.length>1){
+                } else if (groupItems.length > 1) {
                     return allSiblings.index(groupItems.first()) / groupItems.length;
                 }
             }
+
             return 0;
         });
 
-        addMagic('$clone', function(obj){
+        addMagic('$clone', function (obj) {
             return $.extend(true, {}, obj);
         });
-
-        this.getRootScope = function(){
-            return $.extend(true, {}, _rootScopes.$root);
-        };
 
     });
 
     Mvvm.defaults = {
-        attr_pre: 'av'
-        , show_error: false
-        , trigger_events: 'change keyup'
-        , show_dev_info : false
-        , use_text_expression: false
+        attr_pre: 'av', show_error: false, trigger_events: 'change keyup', show_dev_info: false, use_text_expression: false, force_delay: true
     };
 
-    Mvvm.bindingName = function(name){
-        return this.defaults.attr_pre+'-'+name;
+    Mvvm.bindingName = function (name) {
+        return this.defaults.attr_pre + '-' + name;
     };
 
-    Mvvm.devInfo = function ($el, name,info) {
-        this.defaults.show_dev_info && $el.attr( this.bindingName(name)+'-dev', info );
+    Mvvm.devInfo = function ($el, name, info) {
+        this.defaults.show_dev_info && $el.attr(this.bindingName(name) + '-dev', info);
     };
 
-    Mvvm.elementExists = function($el){
+    Mvvm.elementExists = function ($el) {
         return $el.parents('html').length > 0 || $el.is('html');
     };
 
-    Mvvm.executeExpression = function(expression,ctx){
+    Mvvm.executeExpression = function (expression, ctx) {
         //return _evalExpression.call(ctx,expression);
         return _compiledExpression(expression).call(ctx);
     };
 
     avril.mvvm = avril.Mvvm();
 
-})(jQuery
-, function(expression){
-    with (this){
-        try
-        {
-            return eval('('+ expression +')' );
-        } catch (E){
-            if(avril.Mvvm.defaults.show_error === true){
-                throw E;
-            }
-            if(avril.Mvvm.defaults.errorHandler){
-                avril.Mvvm.defaults.errorHandler(E);
+})(window.jQuery
+    , function (expression) {
+        with (this) {
+            try {
+                return eval('(' + expression + ')');
+            } catch (E) {
+                if (avril.Mvvm.defaults.show_error === true) {
+                    throw E;
+                }
+                if (avril.Mvvm.defaults.errorHandler) {
+                    avril.Mvvm.defaults.errorHandler(E);
+                }
             }
         }
+        return '';
     }
-    return '';
-}
-, function(){
-    var cache = {};
-    return function(expression) {
-        if(cache[expression]){
-            return cache[expression];
-        }
-        try{
-            return cache[expression] = new Function(
-                'with (this){\n\
-                    try{\n\
-                        return '+expression+';\n\
+    , function () {
+        var cache = {};
+        return function (expression) {
+            if (cache[expression]) {
+                return cache[expression];
+            }
+            try {
+                return cache[expression] = new Function(
+                        'with (this){\n\
+                            try{\n\
+                                return ' + expression + ';\n\
                     } catch (E){\n\
                         if(avril.Mvvm.defaults.show_error === true){\n\
                             throw E;\n\
@@ -3217,10 +3196,10 @@
                         return \'\';\n\
                     \n}\
                 \n}'
-            );
-        }catch (E){
-            return cache[expression] = function(){
-            };
+                );
+            } catch (E) {
+                return cache[expression] = function () {
+                };
+            }
         }
-    }
-}());
+    }());
