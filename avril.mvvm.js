@@ -1118,7 +1118,7 @@
 
     avril.mvvm = avril.Mvvm();
 
-})(jQuery
+})(window.jQuery
     , function (expression) {
         with (this) {
             try {
