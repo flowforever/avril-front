@@ -710,13 +710,15 @@
 
                 if (isSimpleExpression)
                     this.subscribeArrayEvent($el, options);
-            }, update: function ($el, value, options) {
+            }
+            , update: function ($el, value, options) {
                 if (options.sourceElement && $el.is(options.sourceElement)) {
                     return false;
                 }
                 $el.html(htmlCacheProvider($el));
                 this.renderItems($el, value);
-            }, subscribeArrayEvent: function ($el) {
+            }
+            , subscribeArrayEvent: function ($el) {
                 var binder = this;
                 var ns = getNs($el);
                 var arrayEvents = self.array(ns, $el).events;
@@ -732,7 +734,8 @@
                 arrayEvents.indexChange(function () {
 
                 });
-            }, renderItems: function ($el, value) {
+            }
+            , renderItems: function ($el, value) {
                 var items = value();
                 if (!items || !(items instanceof Array)) {
                     items = [];
@@ -764,25 +767,30 @@
 
                 self.bindDom($el, $el.attr(binderName('delay')) !== 'false');
 
-            }, getStart: function ($el) {
+            }
+            , getStart: function ($el) {
                 if ($el.length == 1) {
                     return $el;
                 }
                 else {
                     return $el.last();
                 }
-            }, eachItemAttrName: binderName('each-item'), itemTemplateDataName: 'av-each-item-template', getOrgSourceEl: function ($el) {
+            }
+            , eachItemAttrName: binderName('each-item')
+            , itemTemplateDataName: 'av-each-item-template'
+            , getOrgSourceEl: function ($el) {
                 var itemAttrName = this.eachItemAttrName;
                 var $itemTemplate = $el.children('[' + itemAttrName + '=true]');
                 if ($itemTemplate.length == 0) {
                     $itemTemplate = $el.children().attr(itemAttrName, 'true');
                 }
                 return $itemTemplate;
-            }, getTemplateSource: function ($el) {
+            }
+            , getTemplateSource: function ($el) {
                 if ($el.data(binderName(this.itemTemplateDataName))) {
                     return $el.data(binderName(this.itemTemplateDataName));
                 }
-                var itemAttrName = this.eachItemAttrName;
+
                 var $itemTemplate = this.getOrgSourceEl($el);
 
                 function addGroupId() {
@@ -795,22 +803,26 @@
 
                 $el.data(binderName(this.itemTemplateDataName), $itemTemplate);
                 return $itemTemplate.hide();
-            }, getLastEl: function ($el) {
+            }
+            , getLastEl: function ($el) {
                 var itemAttrName = this.eachItemAttrName;
-                var $itemEl = $el.find('[' + itemAttrName + '="generated"]');
+                var $itemEl = $el.children('[' + itemAttrName + '="generated"]');
                 if ($itemEl.length == 0) {
                     return this.getOrgSourceEl($el);
                 }
                 return $itemEl.length == 1 ? $itemEl : $itemEl.last();
-            }, getItemByDataIndex: function ($el, index) {
+            }
+            , getItemByDataIndex: function ($el, index) {
                 return $el.children('[' + this.eachItemAttrName + '="generated"][av-scope="[' + index + ']"]');
-            }, addItem: function ($el, array) {
+            }
+            , addItem: function ($el, array) {
                 var $lastEl = this.getLastEl($el);
                 var $newItem = this.generateItem($el);
                 $newItem.attr(binderName('scope'), '[' + (array.length - 1) + ']');
                 $lastEl.after($newItem);
                 self.bindDom($newItem);
-            }, removeItem: function ($el, data, index, args) {
+            }
+            , removeItem: function ($el, data, index, args) {
                 var $elToRemove = this.getItemByDataIndex($el, index)
                     , $siblings = $elToRemove.nextAll('[' + this.eachItemAttrName + '="generated"][av-scope!="[' + index + ']"]')
                     , ns = _standardiseNs(getNs($el))
@@ -849,7 +861,8 @@
                 !args._eventAdjusted && changeSubscribeEvents();
                 args._eventAdjusted = true;
                 adjustSiblingsOrder();
-            }, generateItem: function ($el) {
+            }
+            , generateItem: function ($el) {
                 return this.getTemplateSource($el).clone()
                     .removeAttr(binderName('stop')).attr(this.eachItemAttrName, "generated")
                     .show();
