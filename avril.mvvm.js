@@ -343,18 +343,36 @@
             }()
             , _standardiseNs = function (ns) {
                 var avObjExecPropArr = avril.object._getExecPropArr(ns);
-                return avril.array(avObjExecPropArr).select(function (execArr, index) {
+                return avril.array(avObjExecPropArr).select(function (execArr) {
                     var prop = avril.object._getPropFromExecArr(execArr);
                     if (execArr[1]) {
                         return '[' + prop + ']';
                     } else if (execArr[2]) {
                         return '[\'' + prop + '\']'
                     }
-
                     return '[\'' + prop + '\']'
                 }).value().join('');
             }
+            , _getNsPrevNodes = function(ns){
+                var avObjExecPropArr = avril.object._getExecPropArr(ns);
+                var _tempStr = '';
+                var results = avril.array(avObjExecPropArr).select(function(execArr, index){
+                    var item = avril.object._getPropFromExecArr(execArr);
+
+                    _tempStr += _standardiseNs(item);
+
+                    return _tempStr;
+
+                }).value();
+
+                results.shift();
+                results.pop();
+
+                return results;
+            }
             ;
+
+        this.getNsPrevNodes = _getNsPrevNodes;
 
         this.selector = _generateSelector();
 
@@ -445,7 +463,11 @@
                     }
                 }
                 avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/, ''), value);
-                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns } ]);
+                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns, guid: avril.guid() } ]);
+            }
+            if(!oldValue){
+                //publish node change
+                
             }
         };
 
@@ -520,7 +542,10 @@
             var nsArr = ns.split(',');
             avril.array(nsArr).each(function (scope) {
                 var ctx = {
-                    subscribes: nsArr, subscribeStr: ns, current: scope, values: function (func) {
+                    subscribes: nsArr,
+                    subscribeStr: ns,
+                    current: scope,
+                    values: function (func) {
                         var values = avril.array(this.subscribes).select(function (ns) {
                             return self.getVal(ns);
                         }).value();
@@ -529,6 +554,11 @@
                     }
                 };
                 getEventChannel(scope)(func, options, ctx);
+
+                var prevNsNodes = _getNsPrevNodes(scope);
+                avril.array( prevNsNodes ).each(function(nsNode){
+                    getOptEventChannel(nsNode, 'nodeChange')(func, options, { guid:avril.guid(), nodeChange: true });
+                });
             });
         };
 
