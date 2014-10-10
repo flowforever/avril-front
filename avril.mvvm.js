@@ -366,13 +366,10 @@
                 }).value();
 
                 results.shift();
-                results.pop();
 
                 return results;
             }
             ;
-
-        this.getNsPrevNodes = _getNsPrevNodes;
 
         this.selector = _generateSelector();
 
@@ -462,12 +459,27 @@
                         value = Number(value);
                     }
                 }
+
+                var prevNsNodes = _getNsPrevNodes(ns)
+                    , oldValues=[]
+                    , newValues=[];
+
+                prevNsNodes.pop();
+
+                avril.array(prevNsNodes).each(function(ns){
+                    oldValues.push( avril.object(_rootScopes).getVal(ns) );
+                });
+
                 avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/, ''), value);
+
                 !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns, guid: avril.guid() } ]);
-            }
-            if(!oldValue){
-                //publish node change
-                
+
+                avril.array(prevNsNodes).each(function(ns, i){
+                    newValues.push( avril.object(_rootScopes).getVal(ns) );
+                    if(oldValues[i]  !== newValues[i]){
+                        getOptEventChannel(ns, 'nodeChange')([]);
+                    }
+                });
             }
         };
 
@@ -556,6 +568,7 @@
                 getEventChannel(scope)(func, options, ctx);
 
                 var prevNsNodes = _getNsPrevNodes(scope);
+
                 avril.array( prevNsNodes ).each(function(nsNode){
                     getOptEventChannel(nsNode, 'nodeChange')(func, options, { guid:avril.guid(), nodeChange: true });
                 });
