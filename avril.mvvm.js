@@ -462,7 +462,8 @@
 
                 var prevNsNodes = _getNsPrevNodes(ns)
                     , oldValues=[]
-                    , newValues=[];
+                    , newValues=[]
+                    , notifyId = avril.guid();
 
                 prevNsNodes.pop();
 
@@ -472,14 +473,7 @@
 
                 avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/, ''), value);
 
-                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns, guid: avril.guid() } ]);
-
-                avril.array(prevNsNodes).each(function(ns, i){
-                    newValues.push( avril.object(_rootScopes).getVal(ns) );
-                    if(oldValues[i]  !== newValues[i]){
-                        getOptEventChannel(ns, 'nodeChange')([]);
-                    }
-                });
+                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns, guid: notifyId } ]);
             }
         };
 
@@ -566,12 +560,6 @@
                     }
                 };
                 getEventChannel(scope)(func, options, ctx);
-
-                var prevNsNodes = _getNsPrevNodes(scope);
-
-                avril.array( prevNsNodes ).each(function(nsNode){
-                    getOptEventChannel(nsNode, 'nodeChange')(func, options, { guid:avril.guid(), nodeChange: true });
-                });
             });
         };
 
