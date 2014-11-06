@@ -185,7 +185,16 @@
         /// });
         ///</summary>
 
+        var config = {
+            moduleRoot: '/avril'
+            , printLog: true
+        };
+
         var avril = {};
+
+        avril.config = function(options){
+            return $.extend(config, options);
+        };
 
         avril.avril = 'avril';
 
@@ -219,23 +228,23 @@
 
         avril.isValueType = function (input) {
             return input == null || 'number,boolean,string,undefined'.split(',').indexOf(typeof input) >= 0;
-        }
+        };
 
         avril.isFunc = function (obj) {
             return typeof obj == 'function';
-        }
+        };
 
         avril.isObj = function (obj) {
             return typeof obj == 'object';
-        }
+        };
 
         avril.isArray = function (obj) {
             return obj instanceof Array;
-        }
+        };
 
         avril.isStr = function (obj) {
             return typeof obj == 'string';
-        }
+        };
 
         avril.helper = {
             encode: function (input) {
@@ -283,72 +292,72 @@
             else {
                 throw " typeof(spaceName) must be string!";
             }
-        }
+        };
 
-        avril.module = function (namespace, dependences, func) {
-            ///<summary>
-            /// registing method or object to avril
-            ///</summary>
-            ///<param type="object" name="spaceName">
-            /// create a namespace
-            ///</param>
-            arguments.length == 2 && (func = dependences, dependences = []);
-            if (typeof dependences === 'string') {
-                dependences = dependences.trimAll().split(',');
-            }
-            var getEvent = avril.module.getModuleEvent
-            , waitModules = avril.array(dependences).where(function (ns) {
-                return !avril.object(window).getVal(ns);
-            }).value()
-            , executeCount = 0
-            , execute = function (times) {
-                printDependences();
-                if (times == waitModules.length) {
-                    avril.namespace(namespace);
-                    var module = avril.object(window).getVal(namespace);
-                    var dependenceModules = dependences.select(function (ns) {
-                        return avril.object(window).getVal(ns);
-                    });
-                    func.apply(module, dependenceModules);
-                    getEvent(namespace)([name]);
+        avril.module = function () {
+            var queuerCache = {}
+                , getQueuer = function (depArr){
+                    var guid ;
+                    for(var i=0; i< depArr.length;i++) {
+                        if( queuerCache[ _loadCache[ depArr[i] ] ] ){
+                            guid = _loadCache[ depArr[i] ] ;
+                            break;
+                        }
+                    }
+                    if(!guid){
+                        guid = avril.guid();
+                        queuerCache[ guid ] =avril.tools.queue('Module_loader_' + guid);
+                    }
+                    for(var i=0; i< depArr.length;i++) {
+                        _loadCache[ depArr[i] ] = guid;
+                    }
+                    return queuerCache[ guid ];
                 }
-            }
-            , printDependences = function () {
-                var _waits = avril.array(waitModules).where(function (module) {
-                    return !avril.object(window).getVal(module);
-                }).value();
-                var _finished = avril.array(dependences).where(function (module) {
-                    return !!avril.object(window).getVal(module);
-                }).value();
-                if (_waits.length == 0) {
-                    console.log(namespace + ' dependences loaded complete.');
-                } else {
-                    console.log(namespace + ' dependences loaded ' + _finished.join(',') + ', waiting: ' + _waits.join(','));
-                }
-            };
+                , _loadCache = {}
+                , loadScript = config.scriptLoader || function (moduleNs, callback) {
+                        if(_loadCache[moduleNs] === true){
+                            avril.log('avril.module: Load module from cache: '+ moduleNs);
+                            return callback();
+                        }
+                        var maxTryCount = config.scriptLoadTryCount || 5
+                            , loadCounter = 1;
+                        (function _load(){
+                            $.getScript([config.moduleRoot,moduleNs.replace(/\./g,'/')].join('/') + '.js')
+                                .success(function(){
+                                    avril.log('avril.module: Success to load: '+ moduleNs);
+                                    _loadCache[moduleNs] = true;
+                                    callback();
+                                })
+                                .fail(function(){
+                                    if(loadCounter++ == maxTryCount){
+                                        avril.error('avril.module: Fail to load: '+ moduleNs);
+                                        callback();
+                                    }else{
+                                        _load();
+                                    }
+                                });
+                        })();
 
-            if (waitModules.length > 0) {
-                avril.array(waitModules).each(function (ns) {
-                    getEvent(ns)(function () {
-                        execute(++executeCount);
+                };
+            return function(dependences, func, loadDepSeq){
+                var depArr = avril.isArray(dependences) ? dependences : dependences.split(',');
+
+                var queuer = getQueuer(depArr);
+
+                console.log(queuer);
+
+                var queueFuncName = loadDepSeq? 'func' : 'paralFunc';
+                avril.array(depArr).each(function(moduleNs){
+                    queuer = queuer[queueFuncName](function(next){
+                        loadScript( moduleNs, next );
                     });
                 });
-            }
-
-            execute(0);
-        }
-
-        avril.module.getModuleEvent = function (ns) {
-            return avril.event.get('module.events.' + ns);
-        }
-
-        avril.module.notify = function (ns, data) {
-            avril.module.getModuleEvent(ns)([ns, data])
-        }
-
-        avril.module.subscribe = function (ns, func) {
-            avril.module.getModuleEvent(ns)(func);
-        }
+                queuer.func(function(next){
+                    func();
+                    next();
+                });
+            };
+        }();
 
         avril.extend = function (obj1, obj2) {
             ///<summary>
@@ -387,7 +396,7 @@
             }
 
             return avril;
-        }
+        };
 
         //------useful method in js----------------------
 
@@ -596,7 +605,7 @@
                 }
             };
             return api;
-        }
+        };
 
         $.extend(avril.object, avrilObject);
 
@@ -619,11 +628,11 @@
             } else if (arguments.length == 0) {
                 return _tempdata;
             }
-        }
+        };
 
         avril.guid = function () {
             return  Math.random().toString(32).replace('.', '_') +  (new Date().getTime().toString(32));
-        }
+        };
 
         var __getHash = (function(){
             var counter = 0;
@@ -654,7 +663,7 @@
                 avril.getHash = top.avril ? top.avril.getHash : __getHash;
             }
             _single_getHashInited = true;
-        }
+        };
 
         //-------end us -useful method in js------------
 
@@ -1537,7 +1546,8 @@
 
     avril.array('log,warn,error'.split(',')).each(function(action){
         avril[action] = function(msg){
-            console[action] && console[action](msg);
+            if(avril.config().printLog)
+                console[action] && console[action](msg);
         }
     });
 
@@ -1733,17 +1743,6 @@
                 $.ajax(options);
             }
         }
-        , loadScript: function (url, callback) {
-            if (!callbackCache.hasOwnProperty(url)) {
-                loadingList.push(url);
-                callbackCache[url] = callback || function () { };
-                if (loadingList.length == 1) {
-                    this._loadScript();
-                }
-            } else {
-                callback();
-            }
-        }
         , loadStyle: function (url) {
             var head = document.getElementsByTagName('head') || document.getElementById('body');
             var style = document.createElement('link');
@@ -1856,31 +1855,98 @@
     })();
     //#endregion
 
+    avril.tools.simpleCounter = function Counter(total,callback){
+        if(!(this instanceof  Counter)){
+            return new Counter(total,callback);
+        }
+
+        var _total = total;
+        var _count = 1;
+        var _execResult = [];
+        this.count = function(){
+            _execResult.push(arguments);
+            if(_count == _total){
+                callback( _execResult );
+            }
+            _count++;
+        };
+    }
 
     //avril.tools.queue
     avril.tools.queue = (function(){
         var queues = {};
+
         function Queue(name){
+            var self = this;
             this.name = name;
             var queue = [];
+            
             var pickNext = function(){
                 var task = queue[0];
-                if(task ){
+                if(task){
                     var fn =task.fn;
                     if(!task.status){
                         task.status = 'doing';
-                        fn( function(){
-                            task.status = 'done';
-                            queue.shift();
-                            pickNext();
-                        });
+                        if(!task.paralId){
+                            fn(function(){
+                                task.status = 'done';
+                                queue.shift();
+                                pickNext();
+                            });
+                        }else{
+                            var counter = avril.tools.simpleCounter(fn.length, function(){
+                                task.status = 'done';
+                                queue.shift();
+                                pickNext();
+                            });
+                            for(var i=0; i< fn.length;i++){
+                                wrapFn(fn[i])( counter.count );
+                            }
+                        }
                     }
                 }
             };
+
             this.func = function(fn){
-                queue.push({fn: wrapFn(fn) } );
-                pickNext();
+                if(arguments.length == 1){
+                    queue.push({fn: wrapFn(fn) } );
+                    pickNext();
+                } else if( arguments.length > 1){
+                    // param calls
+                    queue.push({ fn: arguments, paralId: avril.guid() })
+                }
+                return this;
             };
+
+            this.paralFunc = function(fn){
+                var wrapSelf = arguments[1];
+                if(!wrapSelf){
+                    wrapSelf = {
+                        paralFunc: function(fn){
+                            this.fnArr.push(fn);
+                            return this;
+                        }
+                        , fnArr:[]
+                        , exec: function() {
+                            self.func.apply(self, this.fnArr);
+                            this.exec = function() {
+                                return self;
+                            };
+                            return self;
+                        }
+                        , func: function(){
+                            this.exec();
+                            return self.func.apply(self,arguments);
+                        }
+                    };
+                }
+                return wrapSelf.paralFunc(fn);
+            };
+
+            this.exec = function(){
+                return this;
+            };
+
             var wrapFn = function(fn){
                 if(fn.length >0){
                     return fn;
@@ -1889,7 +1955,8 @@
                     fn();
                     cb();
                 }
-            }
+            };
+
         }
 
         return function(name){
@@ -1898,6 +1965,7 @@
         };
 
     })();
+
 })($, avril);
 
 /// <reference path="../_reference.js" />
@@ -2503,7 +2571,8 @@
 
                 var prevNsNodes = _getNsPrevNodes(ns)
                     , oldValues=[]
-                    , newValues=[];
+                    , newValues=[]
+                    , notifyId = avril.guid();
 
                 prevNsNodes.pop();
 
@@ -2513,14 +2582,7 @@
 
                 avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/, ''), value);
 
-                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns, guid: avril.guid() } ]);
-
-                avril.array(prevNsNodes).each(function(ns, i){
-                    newValues.push( avril.object(_rootScopes).getVal(ns) );
-                    if(oldValues[i]  !== newValues[i]){
-                        getOptEventChannel(ns, 'nodeChange')([]);
-                    }
-                });
+                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns, guid: notifyId } ]);
             }
         };
 
@@ -2607,12 +2669,6 @@
                     }
                 };
                 getEventChannel(scope)(func, options, ctx);
-
-                var prevNsNodes = _getNsPrevNodes(scope);
-
-                avril.array( prevNsNodes ).each(function(nsNode){
-                    getOptEventChannel(nsNode, 'nodeChange')(func, options, { guid:avril.guid(), nodeChange: true });
-                });
             });
         };
 

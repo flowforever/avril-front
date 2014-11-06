@@ -186,17 +186,6 @@
                 $.ajax(options);
             }
         }
-        , loadScript: function (url, callback) {
-            if (!callbackCache.hasOwnProperty(url)) {
-                loadingList.push(url);
-                callbackCache[url] = callback || function () { };
-                if (loadingList.length == 1) {
-                    this._loadScript();
-                }
-            } else {
-                callback();
-            }
-        }
         , loadStyle: function (url) {
             var head = document.getElementsByTagName('head') || document.getElementById('body');
             var style = document.createElement('link');
@@ -309,31 +298,98 @@
     })();
     //#endregion
 
+    avril.tools.simpleCounter = function Counter(total,callback){
+        if(!(this instanceof  Counter)){
+            return new Counter(total,callback);
+        }
+
+        var _total = total;
+        var _count = 1;
+        var _execResult = [];
+        this.count = function(){
+            _execResult.push(arguments);
+            if(_count == _total){
+                callback( _execResult );
+            }
+            _count++;
+        };
+    }
 
     //avril.tools.queue
     avril.tools.queue = (function(){
         var queues = {};
+
         function Queue(name){
+            var self = this;
             this.name = name;
             var queue = [];
+            
             var pickNext = function(){
                 var task = queue[0];
-                if(task ){
+                if(task){
                     var fn =task.fn;
                     if(!task.status){
                         task.status = 'doing';
-                        fn( function(){
-                            task.status = 'done';
-                            queue.shift();
-                            pickNext();
-                        });
+                        if(!task.paralId){
+                            fn(function(){
+                                task.status = 'done';
+                                queue.shift();
+                                pickNext();
+                            });
+                        }else{
+                            var counter = avril.tools.simpleCounter(fn.length, function(){
+                                task.status = 'done';
+                                queue.shift();
+                                pickNext();
+                            });
+                            for(var i=0; i< fn.length;i++){
+                                wrapFn(fn[i])( counter.count );
+                            }
+                        }
                     }
                 }
             };
+
             this.func = function(fn){
-                queue.push({fn: wrapFn(fn) } );
-                pickNext();
+                if(arguments.length == 1){
+                    queue.push({fn: wrapFn(fn) } );
+                    pickNext();
+                } else if( arguments.length > 1){
+                    // param calls
+                    queue.push({ fn: arguments, paralId: avril.guid() })
+                }
+                return this;
             };
+
+            this.paralFunc = function(fn){
+                var wrapSelf = arguments[1];
+                if(!wrapSelf){
+                    wrapSelf = {
+                        paralFunc: function(fn){
+                            this.fnArr.push(fn);
+                            return this;
+                        }
+                        , fnArr:[]
+                        , exec: function() {
+                            self.func.apply(self, this.fnArr);
+                            this.exec = function() {
+                                return self;
+                            };
+                            return self;
+                        }
+                        , func: function(){
+                            this.exec();
+                            return self.func.apply(self,arguments);
+                        }
+                    };
+                }
+                return wrapSelf.paralFunc(fn);
+            };
+
+            this.exec = function(){
+                return this;
+            };
+
             var wrapFn = function(fn){
                 if(fn.length >0){
                     return fn;
@@ -342,7 +398,8 @@
                     fn();
                     cb();
                 }
-            }
+            };
+
         }
 
         return function(name){
@@ -351,4 +408,5 @@
         };
 
     })();
+
 })($, avril);
