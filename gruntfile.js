@@ -85,7 +85,7 @@ module.exports = function(grunt){
 
     grunt.loadNpmTasks('grunt-contrib-copy');
 
-    grunt.registerTask('default' , ['concat', 'uglify', "less" ] );
+    grunt.registerTask('default' , ['concat', 'uglify', "less", "copy" ] );
 
     grunt.registerTask('watch-dev', ['watch'] );
 
