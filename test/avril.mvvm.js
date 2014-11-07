@@ -39,7 +39,7 @@
 
             this.timeout(1000000);
 
-            describe('#av-bind', function(){
+            describe('binder#av-bind', function(){
 
                 it('form#form0 input[name=firstName] value should be :'+ rootModel.basicForm.firstName, function(){
                     expect($('input[name=firstName]').val()).equal(rootModel.basicForm.firstName);
@@ -61,9 +61,9 @@
                         done();
                     },2000)
                 })
-            })
+            });
 
-            describe('#av-each', function(){
+            describe('binder#av-each', function(){
                 it('#virtualScope should have 5 children', function(){
                     expect( $('#virtualScope li:visible').length ).equal(5)
                 });
@@ -81,6 +81,9 @@
 
             });
 
+            describe('#setVal()', function(){
+
+            });
         });
 
     });

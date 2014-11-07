@@ -1,5 +1,6 @@
 ﻿//#region avril.array
 ;(function(){
+    'use sctrict';
 
     String.prototype.toUnicode = function () {
         return escape(this).replace(/\%/g, '\\');
@@ -198,8 +199,6 @@
 
         avril.avril = 'avril';
 
-        avril.$ = jQuery;
-
         var _extendMethod = function (obj) {
             if (typeof (obj) == 'function' || typeof (obj) == 'object') {
                 obj.extend = function (objx, objx2) {
@@ -315,7 +314,7 @@
                 }
                 , _loadCache = {}
                 , loadScript = config.scriptLoader || function (moduleNs, callback) {
-                        if(_loadCache[moduleNs] === true){
+                        if(_loadCache[moduleNs] === true || avril.object(window).getVal(moduleNs)){
                             avril.log('avril.module: Load module from cache: '+ moduleNs);
                             return callback();
                         }
@@ -343,8 +342,6 @@
                 var depArr = avril.isArray(dependences) ? dependences : dependences.split(',');
 
                 var queuer = getQueuer(depArr);
-
-                console.log(queuer);
 
                 var queueFuncName = loadDepSeq? 'func' : 'paralFunc';
                 avril.array(depArr).each(function(moduleNs){
@@ -668,6 +665,7 @@
         //-------end us -useful method in js------------
 
         window.avril = avril;
+
     })(); //end avril
 
     //#endregion
@@ -1544,13 +1542,26 @@
         window.console.log = function () { };
     }
 
-    avril.array('log,warn,error'.split(',')).each(function(action){
-        avril[action] = function(msg){
-            if(avril.config().printLog)
-                console[action] && console[action](msg);
-        }
-    });
+    (function(){
+        var typeStyle = {
+            'log': 'color:black;',
+            'success': 'color:green;',
+            'warn': 'color:#eb9316;font-weight:bold;',
+            'error': 'color:red;'
+        };
+        avril.array( avril.object(typeStyle).keys() ).each(function(action) {
+            avril[action] = function(msg){
+                if(avril.config().printLog){
+                    if( avril.isValueType(msg) ){
+                        console.log('%c ' + msg, typeStyle[action]);
+                    }else{
+                        console.log(msg);
+                    }
+                }
+            }
+        });
 
 
+    })();
 
 })(this);

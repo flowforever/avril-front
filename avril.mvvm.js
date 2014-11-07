@@ -1134,7 +1134,11 @@
     });
 
     Mvvm.defaults = {
-        attr_pre: 'av', show_error: false, trigger_events: 'change keyup', show_dev_info: false, use_text_expression: false, force_delay: true
+        attr_pre: 'av', show_error: false,
+        trigger_events: 'change keyup',
+        show_dev_info: false,
+        use_text_expression: false,
+        force_delay: true
     };
 
     Mvvm.bindingName = function (name) {

@@ -409,4 +409,121 @@
 
     })();
 
+    avril.createlib('avril.tools.Router', function(options) {
+
+        var config = $.extend(this.options(), {
+                routerRoot: '/' // set on init
+                , useHash: true //set on init
+                , attchToWindow: true
+            }, options)
+            , historyApiSupport = function(){ return !!(
+                history.pushState
+                && window.onpopstate
+                && window.onhashchange
+                ) }()
+            , useHash = function() {
+                if(config.useHash === true){ return true; }
+                if(config.useHash === false) { return false; }
+                return historyApiSupport;
+            }()
+            , backUrls = []
+            , forwardUrls = [];
+
+        /*
+        * ns format:
+        * '/' ==> / , /?... , /?...#...
+        * '/blog' ==> /blog , /blog/ , /blog?... , /blog/?...
+        * '/blog/{detailId}'
+        * '/blog/*'
+        * '/blog/{category1}/{category2}'
+        * */
+        this.add = function (ns, routerFormat, func) {
+            if(arguments.length == 2){
+                func = routerFormat;
+                routerFormat = ns;
+                ns = undefined;
+            };
+            return this;
+        };
+
+        this.remove = function(routerFormat) {
+            return this;
+        };
+
+        this.removeNs = function (ns) {
+            return this;
+        };
+
+        this.navigateTo = function(routerFormat) {
+            forwardUrls = [];
+            this.historyChange([
+                {
+                    type: 'navigateTo'
+                    , arg: routerFormat
+                }
+            ]);
+            return this;
+        };
+
+        this.nevigateToNs = function(ns, param) {
+            forwardUrls = [];
+            this.historyChange([
+                {
+                    type: 'navigateToNs'
+                    , arg: {
+                        ns: ns
+                        , param: param
+                    }
+                }
+            ]);
+            return this;
+        };
+
+        this.isCurrent = function (ns) {
+
+        };
+
+        this.currentNs = function () {
+
+        };
+
+        this.currentRoute = function(){
+
+        };
+
+        this.currentUrl = function() {
+
+        };
+
+        this.getHash = function() { };
+
+        this.back = function(n) {
+            this.historyChange([
+                {
+                    type: 'back'
+                    , arg: n
+                }
+            ]);
+        };
+
+        this.forward = function(n) {
+            this.historyChange([
+                {
+                    type: 'forward'
+                    , arg: n
+                }
+            ]);
+        };
+
+        this.historyChange = avril.event.registerOn(this, 'historyChange', this);
+
+        if(config.attchToWindow) {
+            if(!useHash){
+                $(window).bind('popupstate', function(){ });
+            }else{
+
+            }
+        }
+    });
+
 })($, avril);

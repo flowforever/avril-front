@@ -1,5 +1,6 @@
 //#region avril.array
 ;(function(){
+    'use sctrict';
 
     String.prototype.toUnicode = function () {
         return escape(this).replace(/\%/g, '\\');
@@ -198,8 +199,6 @@
 
         avril.avril = 'avril';
 
-        avril.$ = jQuery;
-
         var _extendMethod = function (obj) {
             if (typeof (obj) == 'function' || typeof (obj) == 'object') {
                 obj.extend = function (objx, objx2) {
@@ -315,7 +314,7 @@
                 }
                 , _loadCache = {}
                 , loadScript = config.scriptLoader || function (moduleNs, callback) {
-                        if(_loadCache[moduleNs] === true){
+                        if(_loadCache[moduleNs] === true || avril.object(window).getVal(moduleNs)){
                             avril.log('avril.module: Load module from cache: '+ moduleNs);
                             return callback();
                         }
@@ -343,8 +342,6 @@
                 var depArr = avril.isArray(dependences) ? dependences : dependences.split(',');
 
                 var queuer = getQueuer(depArr);
-
-                console.log(queuer);
 
                 var queueFuncName = loadDepSeq? 'func' : 'paralFunc';
                 avril.array(depArr).each(function(moduleNs){
@@ -668,6 +665,7 @@
         //-------end us -useful method in js------------
 
         window.avril = avril;
+
     })(); //end avril
 
     //#endregion
@@ -1544,14 +1542,27 @@
         window.console.log = function () { };
     }
 
-    avril.array('log,warn,error'.split(',')).each(function(action){
-        avril[action] = function(msg){
-            if(avril.config().printLog)
-                console[action] && console[action](msg);
-        }
-    });
+    (function(){
+        var typeStyle = {
+            'log': 'color:black;',
+            'success': 'color:green;',
+            'warn': 'color:#eb9316;font-weight:bold;',
+            'error': 'color:red;'
+        };
+        avril.array( avril.object(typeStyle).keys() ).each(function(action) {
+            avril[action] = function(msg){
+                if(avril.config().printLog){
+                    if( avril.isValueType(msg) ){
+                        console.log('%c ' + msg, typeStyle[action]);
+                    }else{
+                        console.log(msg);
+                    }
+                }
+            }
+        });
 
 
+    })();
 
 })(this);
 
@@ -1965,6 +1976,123 @@
         };
 
     })();
+
+    avril.createlib('avril.tools.Router', function(options) {
+
+        var config = $.extend(this.options(), {
+                routerRoot: '/' // set on init
+                , useHash: true //set on init
+                , attchToWindow: true
+            }, options)
+            , historyApiSupport = function(){ return !!(
+                history.pushState
+                && window.onpopstate
+                && window.onhashchange
+                ) }()
+            , useHash = function() {
+                if(config.useHash === true){ return true; }
+                if(config.useHash === false) { return false; }
+                return historyApiSupport;
+            }()
+            , backUrls = []
+            , forwardUrls = [];
+
+        /*
+        * ns format:
+        * '/' ==> / , /?... , /?...#...
+        * '/blog' ==> /blog , /blog/ , /blog?... , /blog/?...
+        * '/blog/{detailId}'
+        * '/blog/*'
+        * '/blog/{category1}/{category2}'
+        * */
+        this.add = function (ns, routerFormat, func) {
+            if(arguments.length == 2){
+                func = routerFormat;
+                routerFormat = ns;
+                ns = undefined;
+            };
+            return this;
+        };
+
+        this.remove = function(routerFormat) {
+            return this;
+        };
+
+        this.removeNs = function (ns) {
+            return this;
+        };
+
+        this.navigateTo = function(routerFormat) {
+            forwardUrls = [];
+            this.historyChange([
+                {
+                    type: 'navigateTo'
+                    , arg: routerFormat
+                }
+            ]);
+            return this;
+        };
+
+        this.nevigateToNs = function(ns, param) {
+            forwardUrls = [];
+            this.historyChange([
+                {
+                    type: 'navigateToNs'
+                    , arg: {
+                        ns: ns
+                        , param: param
+                    }
+                }
+            ]);
+            return this;
+        };
+
+        this.isCurrent = function (ns) {
+
+        };
+
+        this.currentNs = function () {
+
+        };
+
+        this.currentRoute = function(){
+
+        };
+
+        this.currentUrl = function() {
+
+        };
+
+        this.getHash = function() { };
+
+        this.back = function(n) {
+            this.historyChange([
+                {
+                    type: 'back'
+                    , arg: n
+                }
+            ]);
+        };
+
+        this.forward = function(n) {
+            this.historyChange([
+                {
+                    type: 'forward'
+                    , arg: n
+                }
+            ]);
+        };
+
+        this.historyChange = avril.event.registerOn(this, 'historyChange', this);
+
+        if(config.attchToWindow) {
+            if(!useHash){
+                $(window).bind('popupstate', function(){ });
+            }else{
+
+            }
+        }
+    });
 
 })($, avril);
 
@@ -3243,7 +3371,11 @@
     });
 
     Mvvm.defaults = {
-        attr_pre: 'av', show_error: false, trigger_events: 'change keyup', show_dev_info: false, use_text_expression: false, force_delay: true
+        attr_pre: 'av', show_error: false,
+        trigger_events: 'change keyup',
+        show_dev_info: false,
+        use_text_expression: false,
+        force_delay: true
     };
 
     Mvvm.bindingName = function (name) {
