@@ -441,9 +441,15 @@
             if(arguments.length == 2){
                 func = routerFormat;
                 routerFormat = ns;
-                ns = undefined;
+                ns = routerFormat.replace(/\//g,'.');
             };
             return this;
+        };
+        /*
+         * @param function(req, next) func
+         * */
+        this.use = function(route, func){
+
         };
 
         this.remove = function(routerFormat) {

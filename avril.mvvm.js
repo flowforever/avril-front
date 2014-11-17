@@ -71,7 +71,8 @@
                 return binder;
             }
             , _rootScopes = {
-                $root: {}, $controllers: {}
+                $root: {}
+                , $controllers: {}
             }
             , _basicValueTypeReg = /^(true|false|null|undefined)$/
             , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
@@ -644,6 +645,8 @@
         this.getRootScope = function () {
             return $.extend(true, {}, _rootScopes.$root);
         };
+
+        this.router = avril.tools.Router();
 
         var addBinder = this.addBinder.bind(this)
             , addExpressionParser = this.addExpressionParser.bind(this)
