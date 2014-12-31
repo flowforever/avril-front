@@ -321,7 +321,7 @@
                         var maxTryCount = config.scriptLoadTryCount || 5
                             , loadCounter = 1;
                         (function _load(){
-                            $.getScript([config.moduleRoot,moduleNs.replace(/\./g,'/')].join('/') + '.js')
+                            $.getScript([config.moduleRoot,moduleNs].join('/') + '.js')
                                 .success(function(){
                                     avril.log('avril.module: Success to load: '+ moduleNs);
                                     _loadCache[moduleNs] = true;

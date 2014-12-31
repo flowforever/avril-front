@@ -2,6 +2,10 @@
  * Created by trump on 14/6/26.
  */
 (function($){
+    avril.config({
+        moduleRoot: '/js/avril'
+    });
+
     avril.Mvvm.defaults.show_dev_info = true;
 
     var setCurrentMenu = function(){
@@ -15,6 +19,7 @@
     mvvm.setVal('$root.mainMenu',[
         { text: 'Home', url: 'index.html'  }
         , { text: 'Array', url: 'array.html'  }
+        , { text: 'Controller', url: 'controller.html'  }
         , { text: 'Test', url: '/avril-front/test/index.html'  }
     ]);
 
@@ -28,6 +33,20 @@
 
     mvvm.setVal('$root.avRealScope.array',testRealArray);
 
+    mvvm.router.use(function(req, next) {
+        // load controller
+
+
+        //load data
+
+    });
+
+    mvvm.router.use('', function(req,next){
+
+    });
+
+    mvvm.router.add('home', '',function(){ });
+
     $(function(){
 
         setCurrentMenu();
@@ -38,4 +57,5 @@
 
         mvvm.bindDom(document);
     });
+
 })(jQuery);

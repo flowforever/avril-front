@@ -79,9 +79,10 @@
             , getSimpleReg = function () {
                 return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g;
             }
+            , _embeddedRootNsReg = /^\$root|^\$controller/
             , resolveAbsNs = function (ns, relativeNs) {
                 relativeNs = relativeNs || '';
-                if (relativeNs.indexOf('$root') == 0) {
+                if (_embeddedRootNsReg.test(relativeNs)) {
                     return relativeNs;
                 }
                 relativeNs = relativeNs.replace('$scope.', '');
@@ -646,6 +647,8 @@
             return $.extend(true, {}, _rootScopes.$root);
         };
 
+        this.controller = function(){ };
+
         this.router = avril.tools.Router();
 
         var addBinder = this.addBinder.bind(this)
@@ -1132,6 +1135,10 @@
 
         addMagic('$clone', function (obj) {
             return $.extend(true, {}, obj);
+        });
+
+        addMagic('$ctrl', function(name){
+            return self.getVal('$controller.'+name);
         });
 
     });

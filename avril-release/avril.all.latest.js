@@ -321,7 +321,7 @@
                         var maxTryCount = config.scriptLoadTryCount || 5
                             , loadCounter = 1;
                         (function _load(){
-                            $.getScript([config.moduleRoot,moduleNs.replace(/\./g,'/')].join('/') + '.js')
+                            $.getScript([config.moduleRoot,moduleNs].join('/') + '.js')
                                 .success(function(){
                                     avril.log('avril.module: Success to load: '+ moduleNs);
                                     _loadCache[moduleNs] = true;
@@ -1995,8 +1995,58 @@
                 return historyApiSupport;
             }()
             , backUrls = []
-            , forwardUrls = [];
+            , forwardUrls = []
+            , toRegExpWrapper = function(format) {
+                if(format.indexOf('/')!==0){
+                    format = '/' + format;
+                }
+                format = '^'+format;
+                format = format.replace(/\/$/,'');
+                var matchAllReg = /\*$/
+                    , matchAll  = false;
+                if(matchAllReg.test(format)){
+                    format = format.replace(matchAllReg,'.*$');
+                    matchAll = true;
+                }
+                var params = {};
+                var routerParamReg = /\{(.+?)\}/g;
+                var paramCounter = 0;
+                var regStr = format.replace(routerParamReg, function(match, paramName){
+                    params[paramName] = ++paramCounter;
+                    return '(.+?)';
+                });
+                var levelCount = matchAll ? 0 : 1;
 
+                regStr = regStr.replace(/\//g,function(){
+                    levelCount++;
+                    return '\\/';
+                });
+
+                return {
+                    reg: new RegExp( regStr + (matchAll? '': '\\/?(\\?.*)?$') , 'i'  )
+                    , params: params
+                    , level: levelCount
+                    , staticLevel: levelCount - paramCounter
+                    , paramCount: paramCounter
+                }
+            }
+            , routers = []
+            , initSortedRouters = function(){
+                var sorterDigital = function(a,b){
+                    return a == b? 0 : (a < b ? 1: -1);
+                };
+                routers = routers.sort(function(a, b){
+                    if( sorterDigital(a.level, b.level) == 0 ) {
+                        return sorterDigital(a.staticLevel, b.staticLevel);
+                    }else{
+                        return sorterDigital(a.level, b.level);
+                    }
+                });
+            };
+
+        this.routers = function(){
+            return routers;
+        };
         /*
         * ns format:
         * '/' ==> / , /?... , /?...#...
@@ -2009,9 +2059,20 @@
             if(arguments.length == 2){
                 func = routerFormat;
                 routerFormat = ns;
-                ns = undefined;
+                ns = routerFormat.replace(/\//g,'.');
             };
+            var routerWrapper = toRegExpWrapper(routerFormat);
+            routerWrapper.ns = ns;
+            routerWrapper.func = func;
+            routers.push(routerWrapper);
+            initSortedRouters();
             return this;
+        };
+        /*
+         * @param function(req, next) func
+         * */
+        this.use = function(route, func){
+
         };
 
         this.remove = function(routerFormat) {
@@ -2022,7 +2083,7 @@
             return this;
         };
 
-        this.navigateTo = function(routerFormat) {
+        this.navigateTo = function(routerFormat, param) {
             forwardUrls = [];
             this.historyChange([
                 {
@@ -2089,7 +2150,6 @@
             if(!useHash){
                 $(window).bind('popupstate', function(){ });
             }else{
-
             }
         }
     });
@@ -2308,16 +2368,18 @@
                 return binder;
             }
             , _rootScopes = {
-                $root: {}, $controllers: {}
+                $root: {}
+                , $controllers: {}
             }
             , _basicValueTypeReg = /^(true|false|null|undefined)$/
             , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
             , getSimpleReg = function () {
                 return /^((\[(\d+|\".+?\"|\'.+?\')\]|\w+\d*|\$)+(\.\w+\d*)*)+$/g;
             }
+            , _embeddedRootNsReg = /^\$root|^\$controller/
             , resolveAbsNs = function (ns, relativeNs) {
                 relativeNs = relativeNs || '';
-                if (relativeNs.indexOf('$root') == 0) {
+                if (_embeddedRootNsReg.test(relativeNs)) {
                     return relativeNs;
                 }
                 relativeNs = relativeNs.replace('$scope.', '');
@@ -2882,6 +2944,10 @@
             return $.extend(true, {}, _rootScopes.$root);
         };
 
+        this.controller = function(){ };
+
+        this.router = avril.tools.Router();
+
         var addBinder = this.addBinder.bind(this)
             , addExpressionParser = this.addExpressionParser.bind(this)
             , addMagic = this.addMagic.bind(this);
@@ -3366,6 +3432,10 @@
 
         addMagic('$clone', function (obj) {
             return $.extend(true, {}, obj);
+        });
+
+        addMagic('$ctrl', function(name){
+            return self.getVal('$controller.'+name);
         });
 
     });
