@@ -2062,7 +2062,7 @@
             , guid = function () {
                 return getHash({});
             }
-            , binders = {}
+            , binders = this.binders = {}
             , getCacheProvider = function () {
                 var _c = {};
                 return function (name) {
@@ -2419,7 +2419,9 @@
             }
             binders[name] = {
                 init: binder.init.bind(binder), update: binder.update.bind(binder), expressionParser: expressionParser
+                , fn: binder
             };
+
             this.selector = _generateSelector();
         };
 
@@ -2935,7 +2937,7 @@
                     self.bindDom($el);
                 });
             }, isUrl: function (url) {
-                return this.urlReg.test('http://test.com' + (url.indexOf('/') === 0 ? '' : '/') + url) || urlReg.test(url);
+                return this.urlReg.test('http://test.com' + (url.indexOf('/') === 0 ? '' : '/') + url) || this.urlReg.test(url);
             }, getTemplateUrl: function ($el, value, options) {
                 return value() || options.expression;
             }, getTemplate: function (url, callback) {
@@ -3009,6 +3011,10 @@
             for (var k in value) {
                 $el[value[k] ? 'addClass' : 'removeClass'](k);
             }
+        });
+
+        addBinder('css-str', function ($el, value) {
+            $el.attr('class',value());
         });
 
         addBinder('func', function ($el, value) {
@@ -3203,3 +3209,4 @@
             }
         }
     }());
+
