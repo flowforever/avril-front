@@ -2081,12 +2081,8 @@
             , initedElementCacheProvider = getCacheProvider('inited_element_cache')
             , htmlCacheProvider = getCacheProvider('html_template_cache')
             , expressionParsers = []
-            , magics = {
-                global: {
-
-                }, binders: {
-
-                }
+            , magics = this.magics = {
+                global: {}, binders: {}
             }
             , getBinders = function ($el) {
                 var binder = binderCacheProvider($el);
@@ -2112,7 +2108,8 @@
                 return binder;
             }
             , _rootScopes = {
-                $root: {}, $controllers: {}
+                $root: {}
+                , guid: avril.guid()
             }
             , _basicValueTypeReg = /^(true|false|null|undefined)$/
             , _expressionReg = /(\$data|\$scope|\$root)(\[\".+?\"\]|\[\'.+?\'\]|\[\d+\]|\.(\w+\d*)+)+/g
@@ -2152,7 +2149,7 @@
                     if (cache[expression]) {
                         return onFind ? avril.array(cache[expression]).each(onFind) : cache[expression];
                     }
-                    var watchers = [] , watcher;
+                    var watchers = [], watcher;
                     var hasIndexReg = /\$index\(\s*\)/g;
                     if (hasIndexReg.test(expression)) {
                         watchers.push(watcher = _optName('indexChange'));
@@ -2227,7 +2224,7 @@
             , executeExpression = function (expression, $el, binder) {
                 expression = parseExpression(expression, binder);
                 var ns = getNs($el);
-                var ctx = getScope(ns, $el, binder);
+                var ctx = $el.attr(binderName('each'))? getScope(getNs($el.parent()), $el, binder) : getScope(ns, $el, binder);
 
                 return Mvvm.executeExpression(expression, ctx);
             }
@@ -2270,7 +2267,7 @@
             , initElementBinderDependency = function () {
                 var nsCache = {}
                     , getOldNs = function ($el) {
-                        return nsCache[ getHash($el) ];
+                        return nsCache[getHash($el)];
                     }
                     , cacheNs = function ($el, ns) {
                         nsCache[$el] = ns;
@@ -2308,7 +2305,11 @@
                             return 'removeThis';
                         }
                         if (dependenPath || (newValue != oldValue)) {
-                            updateElement($el, $.extend(options, { dependencies: dependenPath, oldValue: oldValue, newValue: newValue }), binder);
+                            updateElement($el, $.extend(options, {
+                                dependencies: dependenPath,
+                                oldValue: oldValue,
+                                newValue: newValue
+                            }), binder);
                         }
                     }, {
                         binder: binder, $el: $el, ns: ns
@@ -2395,6 +2396,7 @@
                     return '[\'' + prop + '\']'
                 }).value().join('');
             }
+            , _modules = {}
             ;
 
         this.selector = _generateSelector();
@@ -2449,6 +2451,17 @@
             }
         };
 
+        this.module = function(ns, module, base) {
+            if(arguments.length == 0){
+                return _modules;
+            }
+            if(arguments.length == 1){
+                return avril.object(_modules).getVal(ns);
+            }
+            avril.createlibOn(_modules, ns, module, null,base);
+            return this;
+        };
+
         var _bindDom = function ($el) {
 
             !$el.is('html') && initElement($el);
@@ -2487,8 +2500,8 @@
                         value = Number(value);
                     }
                 }
-                avril.object(_rootScopes.$root).setVal(ns.replace(/^\$root\.?/, ''), value);
-                !silent && getEventChannel(ns)([ value, oldValue, { sourceElement: $sourceElement, channel: ns } ]);
+                avril.object(_rootScopes).setVal(ns, value);
+                !silent && getEventChannel(ns)([value, oldValue, {sourceElement: $sourceElement, channel: ns}]);
             }
         };
 
@@ -2503,7 +2516,7 @@
                     sourceElement: $el
                 }
                 , triggerLengthChange = function (newLength, oldLength) {
-                    getEventChannel(ns + '.length')([ newLength, oldLength, { sourceElement: $el, channel: ns } ]);
+                    getEventChannel(ns + '.length')([newLength, oldLength, {sourceElement: $el, channel: ns}]);
                 }
                 , triggerIndexChange = function () {
                     events.indexChange([]);
@@ -2511,32 +2524,33 @@
                 , api = {
                     add: function (item) {
                         array.push(item);
-                        getOptEventChannel(ns, 'add')([item, { guid: guid() }]);
+                        getOptEventChannel(ns, 'add')([item, {guid: guid()}]);
                         triggerLengthChange(array.length, array.length - 1);
-                    }, remove: function (item) {
+                    }
+                    , remove: function (item) {
                         this.removeAt(array.indexOf(item));
-                    }, removeAt: function (index) {
+                    }
+                    , removeAt: function (index) {
                         var item = array[index];
                         avril.array(array).removeAt(index);
-                        getOptEventChannel(ns, 'remove')([ item, index, { guid: guid() } ]);
+                        getOptEventChannel(ns, 'remove')([item, index, {guid: guid()}]);
                         triggerLengthChange(array.length, array.length - 1);
                         triggerIndexChange();
-                    }, concat: function (items) {
+                    }
+                    , concat: function (items) {
                         for (var i = 0; i++; i < items.length) {
                             array.push(items[i]);
                         }
-                        getOptEventChannel(ns, 'concat')([items, { guid: guid() }]);
+                        getOptEventChannel(ns, 'concat')([items, {guid: guid()}]);
                         triggerLengthChange(array.length, array.length - items.length);
                     }
                 }
                 , events = function () {
-                    var e = {
-
-                        }
+                    var e = {}
                         , addEvent = function (opt) {
                             e[opt] = function () {
                                 if (typeof arguments[0] === 'function') {
-                                    getOptEventChannel(ns, opt)(arguments[0], { $el: $el, ns: ns });
+                                    getOptEventChannel(ns, opt)(arguments[0], {$el: $el, ns: ns});
                                 } else {
                                     getOptEventChannel(ns, opt)(arguments[0]);
                                 }
@@ -2957,43 +2971,41 @@
                         });
                     }
                 }
-            }, cache: {
-
-            }
+            }, cache: {}
             // come from https://gist.github.com/dperini/729294
             , urlReg: new RegExp(
-                    "^" +
+                "^" +
                     // protocol identifier
-                    "(?:(?:https?|ftp)://)" +
+                "(?:(?:https?|ftp)://)" +
                     // user:pass authentication
-                    "(?:\\S+(?::\\S*)?@)?" +
-                    "(?:" +
+                "(?:\\S+(?::\\S*)?@)?" +
+                "(?:" +
                     // IP address exclusion
                     // private & local networks
-                    "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +
-                    "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})" +
-                    "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})" +
+                "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +
+                "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})" +
+                "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})" +
                     // IP address dotted notation octets
                     // excludes loopback network 0.0.0.0
                     // excludes reserved space >= 224.0.0.0
                     // excludes network & broacast addresses
                     // (first & last IP address of each class)
-                    "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])" +
-                    "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}" +
-                    "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))" +
-                    "|" +
+                "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])" +
+                "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}" +
+                "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))" +
+                "|" +
                     // host name
-                    "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
+                "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
                     // domain name
-                    "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
+                "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
                     // TLD identifier
-                    "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))" +
-                    ")" +
+                "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))" +
+                ")" +
                     // port number
-                    "(?::\\d{2,5})?" +
+                "(?::\\d{2,5})?" +
                     // resource path
-                    "(?:/\\S*)?" +
-                    "$", "i"
+                "(?:/\\S*)?" +
+                "$", "i"
             )
         });
 
@@ -3014,7 +3026,7 @@
         });
 
         addBinder('css-str', function ($el, value) {
-            $el.attr('class',value());
+            $el.attr('class', value());
         });
 
         addBinder('func', function ($el, value) {
@@ -3037,14 +3049,24 @@
             }
         });
 
-        avril.array('click,dblclick,mousein,mouseout,change,blur,focus,keyup,keydown'.split(','))
+        addBinder('link', function($el, value){
+            if($el.is('img,iframe,script')){
+                $el.attr('src', value());
+            } else if($el.is('form')){
+                $el.attr('action', value())
+            } else {
+                $el.attr('href', value())
+            }
+        });
+
+        avril.array('click,dblclick,mousein,mouseout,change,blur,focus,keyup,keydown,submit'.split(','))
             .each(function (eventName) {
                 addBinder(eventName, {
                     init: function ($el, value) {
                         var eventFunc = value();
                         if (eventFunc) {
                             $el.on(eventName, function (e) {
-                                eventFunc(e, $el);
+                                return eventFunc(e, $el);
                             });
                         }
                     }
@@ -3140,10 +3162,32 @@
             return $.extend(true, {}, obj);
         });
 
+        addMagic('$module', function (moduleNs, moduleAlia) {
+            var scopeNs = this.$ns;
+
+            var module = self.module(moduleNs)();
+            if(typeof module == 'function') {
+                module = new module();
+            }
+
+            if(!moduleAlia){
+                self.setVal( scopeNs + '.module' , module );
+            }else{
+                self.setVal( scopeNs + '.' + moduleAlia , module );
+            }
+
+            return scopeNs;
+        });
+
     });
 
     Mvvm.defaults = {
-        attr_pre: 'av', show_error: false, trigger_events: 'change keyup', show_dev_info: false, use_text_expression: false, force_delay: true
+        attr_pre: 'av',
+        show_error: false,
+        trigger_events: 'change keyup',
+        show_dev_info: false,
+        use_text_expression: false,
+        force_delay: true
     };
 
     Mvvm.bindingName = function (name) {
@@ -3189,19 +3233,19 @@
             }
             try {
                 return cache[expression] = new Function(
-                        'with (this){\n\
-                            try{\n\
-                                return ' + expression + ';\n\
-                    } catch (E){\n\
-                        if(avril.Mvvm.defaults.show_error === true){\n\
-                            throw E;\n\
-                        }\n\
-                        if(avril.Mvvm.defaults.errorHandler){\n\
-                            avril.Mvvm.defaults.errorHandler(E);\n\
-                        }\n\
-                        return \'\';\n\
-                    \n}\
-                \n}'
+                    'with (this){\n\
+        try{\n\
+            return ' + expression + ';\n\
+    } catch (E){\n\
+        if(avril.Mvvm.defaults.show_error === true){\n\
+            throw E;\n\
+        }\n\
+        if(avril.Mvvm.defaults.errorHandler){\n\
+            avril.Mvvm.defaults.errorHandler(E);\n\
+        }\n\
+        return \'\';\n\
+    \n}\
+\n}'
                 );
             } catch (E) {
                 return cache[expression] = function () {
