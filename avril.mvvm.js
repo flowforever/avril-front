@@ -901,19 +901,24 @@
         addBinder('template', {
             init: function ($el, value) {
                 this.render.apply(this, arguments);
-            }, update: function ($el, value) {
+            }
+            , update: function ($el, value) {
                 this.render.apply(this, arguments);
-            }, render: function ($el, value, options) {
+            }
+            , render: function ($el, value, options) {
                 var url = this.getTemplateUrl.apply(this, arguments);
                 this.getTemplate(url, function (tmplStr) {
                     $el.html(tmplStr);
                     self.bindDom($el);
                 });
-            }, isUrl: function (url) {
+            }
+            , isUrl: function (url) {
                 return this.urlReg.test('http://test.com' + (url.indexOf('/') === 0 ? '' : '/') + url) || this.urlReg.test(url);
-            }, getTemplateUrl: function ($el, value, options) {
+            }
+            , getTemplateUrl: function ($el, value, options) {
                 return value() || options.expression;
-            }, getTemplate: function (url, callback) {
+            }
+            , getTemplate: function (url, callback) {
                 var binder = this;
                 if (url.indexOf('#') === 0) {
                     return callback($(url).html());
@@ -930,7 +935,8 @@
                         });
                     }
                 }
-            }, cache: {}
+            }
+            , cache: {}
             // come from https://gist.github.com/dperini/729294
             , urlReg: new RegExp(
                 "^" +
