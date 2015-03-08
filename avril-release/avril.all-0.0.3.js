@@ -2224,7 +2224,7 @@
             , executeExpression = function (expression, $el, binder) {
                 expression = parseExpression(expression, binder);
                 var ns = getNs($el);
-                var ctx = $el.attr(binderName('each'))? getScope(getNs($el.parent()), $el, binder) : getScope(ns, $el, binder);
+                var ctx = $el.attr(binderName('each')) ? getScope(getNs($el.parent()), $el, binder) : getScope(ns, $el, binder);
 
                 return Mvvm.executeExpression(expression, ctx);
             }
@@ -2284,11 +2284,15 @@
                     var binders = getBinders($el);
                     var ns = getNs($el);
                     for (var bName in binders) {
-                        var expression = $el.attr(binderName(bName));
-                        var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
-                        binders[bName].init($el, valueAccessor($el, expression, bName), {
-                            expression: expression, ns: ns, dependencies: dependencies
-                        });
+                        (function (bName) {
+                            var expression = $el.attr(binderName(bName));
+                            var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
+                            binders[bName].init($el, valueAccessor($el, expression, bName), {
+                                expression: expression
+                                , ns: ns
+                                , dependencies: dependencies
+                            });
+                        })(bName);
                     }
                     cacheNs($el, ns);
                 }
@@ -2317,6 +2321,12 @@
                     Mvvm.devInfo($el, 'watch-' + binder + '-' + (counter++), absNs);
                 };
                 subscribeDependency(ns);
+                var propArr = getPropArr(ns);
+                propArr.pop();
+                while(propArr.length > 1){
+                    subscribeDependency( propArr.join('') );
+                    propArr.pop();
+                }
                 var watchers = findExpressionDependency(parsedExpressionStr, function (watchPath) {
                     if (watchPath) {
                         var absNs = resolveAbsNs(binder !== 'scope' ? ns : getNs($el.parent()), watchPath);
@@ -2384,6 +2394,9 @@
                 }
             }()
             , _standardiseNs = function (ns) {
+                return getPropArr(ns).join('');
+            }
+            , getPropArr = function(ns) {
                 var avObjExecPropArr = avril.object._getExecPropArr(ns);
                 return avril.array(avObjExecPropArr).select(function (execArr, index) {
                     var prop = avril.object._getPropFromExecArr(execArr);
@@ -2394,7 +2407,7 @@
                     }
 
                     return '[\'' + prop + '\']'
-                }).value().join('');
+                }).value();
             }
             , _modules = {}
             ;
@@ -2451,14 +2464,14 @@
             }
         };
 
-        this.module = function(ns, module, base) {
-            if(arguments.length == 0){
+        this.module = function (ns, module, base) {
+            if (arguments.length == 0) {
                 return _modules;
             }
-            if(arguments.length == 1){
+            if (arguments.length == 1) {
                 return avril.object(_modules).getVal(ns);
             }
-            avril.createlibOn(_modules, ns, module, null,base);
+            avril.createlibOn(_modules, ns, module, null, base);
             return this;
         };
 
@@ -2577,7 +2590,10 @@
             var nsArr = ns.split(',');
             avril.array(nsArr).each(function (scope) {
                 var ctx = {
-                    subscribes: nsArr, subscribeStr: ns, current: scope, values: function (func) {
+                    subscribes: nsArr
+                    , subscribeStr: ns
+                    , current: scope
+                    , values: function (func) {
                         var values = avril.array(this.subscribes).select(function (ns) {
                             return self.getVal(ns);
                         }).value();
@@ -3055,10 +3071,10 @@
             }
         });
 
-        addBinder('link', function($el, value){
-            if($el.is('img,iframe,script')){
+        addBinder('link', function ($el, value) {
+            if ($el.is('img,iframe,script')) {
                 $el.attr('src', value());
-            } else if($el.is('form')){
+            } else if ($el.is('form')) {
                 $el.attr('action', value())
             } else {
                 $el.attr('href', value())
@@ -3172,14 +3188,14 @@
             var scopeNs = this.$ns;
 
             var module = self.module(moduleNs)();
-            if(typeof module == 'function') {
+            if (typeof module == 'function') {
                 module = new module();
             }
 
-            if(!moduleAlia){
-                self.setVal( scopeNs + '.module' , module );
-            }else{
-                self.setVal( scopeNs + '.' + moduleAlia , module );
+            if (!moduleAlia) {
+                self.setVal(scopeNs + '.module', module);
+            } else {
+                self.setVal(scopeNs + '.' + moduleAlia, module);
             }
 
             return scopeNs;
