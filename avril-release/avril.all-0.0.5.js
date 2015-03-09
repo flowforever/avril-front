@@ -2698,6 +2698,8 @@
                 expression = parseExpression(expression);
                 var executeResult = executeExpression(expression, $el.parent());
                 if (typeof  executeResult !== 'string') {
+                    avril.log('element', $el);
+                    avril.log('expression', options.expression);
                     throw new Error('invalid scope value.', $el.selector + ':' + $el[0].outerHTML);
                 }
                 var dependencies = findExpressionDependency(expression);
