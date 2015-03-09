@@ -1536,8 +1536,8 @@
     }
 
     avril.array('log,warn,error'.split(',')).each(function(action){
-        avril[action] = function(msg){
-            console[action] && console[action](msg);
+        avril[action] = function(){
+            console[action] && console[action].apply(console, arguments);
         }
     });
 
@@ -2469,7 +2469,8 @@
                 return _modules;
             }
             if (arguments.length == 1) {
-                return avril.object(_modules).getVal(ns);
+                var moduleDefine = avril.object(_modules).getVal(ns);
+                return moduleDefine;
             }
             avril.createlibOn(_modules, ns, module, null, base);
             return this;
@@ -2709,6 +2710,54 @@
                         return false;
                     }
                 }
+            }
+        });
+
+        addBinder('module',  function($el, value, options) {
+            var expression = options.expression;
+            var isDynamicReg = /^\s*[\[|\{](.|\n)*?[\]|\}]\s*$/;
+            var isDynamic = isDynamicReg.test(expression)
+            if( isDynamic ){
+                expression = value();
+            } else {
+                expression = expression.split(',')
+            }
+
+            if(expression.length == 0){
+                return;
+            }
+
+            var ns = self.getNs($el);
+
+            if(!isDynamic) {
+                (function(){
+                    var moduleNs = expression[0].trim()
+                        , moduleAlia = expression[1] || 'module';
+
+                    self.setVal(resolveAbsNs( ns ,  moduleAlia.trim() ), getModuleDefine(moduleNs));
+                })();
+            } else {
+                (function(){
+                    if(avril.isArray(expression)){
+                        var moduleNs = expression[0].trim()
+                            , moduleAlia = expression[1] || 'module';
+                        self.setVal( resolveAbsNs( ns , moduleAlia.trim() ), getModuleDefine(moduleNs) );
+                    } else if(avril.isObj(expression)){
+                        for(var moduleAlia  in expression){
+                            self.setVal( resolveAbsNs( ns , moduleAlia.trim() ), getModuleDefine(expression[moduleAlia]));
+                        }
+                    }
+                })();
+            }
+
+            function getModuleDefine(moduleNs) {
+                var moduleDefine = self.module(moduleNs);
+                if(!moduleDefine) {
+                    avril.log('binding element', $el);
+                    avril.log('binding expression', options.expression);
+                    throw 'Module [' + moduleNs + '] is not define';
+                }
+                return moduleDefine();
             }
         });
 
@@ -3184,19 +3233,42 @@
             return $.extend(true, {}, obj);
         });
 
-        addMagic('$module', function (moduleNs, moduleAlia) {
-            var scopeNs = this.$ns;
+        addMagic('$remoteScope', function (remoteAddress, scopeNs) {
 
-            var module = self.module(moduleNs)();
-            if (typeof module == 'function') {
-                module = new module();
-            }
+            var scopeNs = scopeNs || 'remote' + avril.guid()
+                , status = {
+                    loading: 'loading'
+                    , success: 'success'
+                    , failed: 'failed'
+                };
 
-            if (!moduleAlia) {
-                self.setVal(scopeNs + '.module', module);
-            } else {
-                self.setVal(scopeNs + '.' + moduleAlia, module);
-            }
+            scopeNs = self.resolveAbsNs(this.$ns, scopeNs);
+
+            var setStatus = function (status) {
+                self.setVal(scopeNs + '.status', status);
+            };
+
+            var setData = function (data) {
+                self.setVal(scopeNs + '.res', data);
+            };
+
+            var loadData = function () {
+                setStatus(status.loading);
+                $.ajax({
+                    url: remoteAddress
+                    , success: function (res) {
+                        setStatus(status.success);
+                        setData(res);
+                    }
+                    , error: function () {
+                        setStatus(status.failed);
+                    }
+                });
+            };
+
+            loadData();
+
+            self.setVal(scopeNs + '.reload', loadData);
 
             return scopeNs;
         });
@@ -3275,4 +3347,3 @@
             }
         }
     }());
-
