@@ -3197,6 +3197,10 @@
         });
 
         addMagic('$setVal', function (relativePath, val) {
+            if(arguments.length == 1) {
+                val = relativePath;
+                relativePath = this.$ns;
+            }
             self.setVal(resolveAbsNs(this.$ns, relativePath), val);
             return val;
         });
