@@ -2252,7 +2252,7 @@
             , _generateSelector = function () {
                 return avril.array(avril.object(binders).keys()).select(function (key) {
                     return '[' + Mvvm.defaults.attr_pre + '-' + key + ']'
-                }).value().join(',')+',[av-stop]';
+                }).value().join(',')+',[' + Mvvm.defaults.attr_pre + '-stop]';
             }
             , binderSelector = function (name) {
                 return '[' + binderName(name) + ']'
@@ -2312,6 +2312,7 @@
                         })(bName);
                     }
                     cacheNs($el, ns);
+                    initAttrNodes($el);
                     initTextNodes($el);
                 }
             }()
@@ -2396,6 +2397,36 @@
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
                             self.subscribe(self.resolveAbsNs(getNs($el), dependency), function(){
                                 node.nodeValue = getNodeValue();
+                            });
+                        });
+                        return valueAccessor($el, expression)();
+                    });
+                }
+            }
+            , initAttrNodes = function ($el) {
+                var el = $el[0]
+                    , attrs = avril.object.toArray(el.attributes)
+                    , binders = getBinders($el)
+                    , ignores = [
+                        Mvvm.defaults.attr_pre+'-stop',
+                        Mvvm.defaults.attr_pre+'-each-item',
+                        Mvvm.defaults.attr_pre+'-each-item-group-id'
+                    ];
+
+                avril.array(attrs).each(function (node) {
+                    var attrName = node.nodeName.replace(Mvvm.defaults.attr_pre+'-','');
+                    if(node.nodeName.indexOf(Mvvm.defaults.attr_pre) === 0 && !binders[attrName] && ignores.indexOf(node.nodeName) < 0 ) {
+                        initAttrNode($el, attrName, node.nodeValue);
+                    }
+                });
+            }
+            , initAttrNode = function($el, attrName, expression) {
+                $el.attr( attrName, getNodeValue(true) );
+                function getNodeValue(isFirstTime){
+                    return expression.replace(expressionNodeReg, function (expressionDefine, expression) {
+                        isFirstTime && findExpressionDependency(expression, function(dependency) {
+                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
+                                $el.attr( attrName, getNodeValue(true) );
                             });
                         });
                         return valueAccessor($el, expression)();
