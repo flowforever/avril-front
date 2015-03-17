@@ -2398,7 +2398,8 @@
                 function getNodeValue(isFirstTime){
                     return nodeValue.replace(expressionNodeReg, function (expressionDefine, expression) {
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
-                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function(){
+                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
+
                                 node.nodeValue = getNodeValue();
                             });
                         });
@@ -2429,7 +2430,10 @@
                     return expression.replace(expressionNodeReg, function (expressionDefine, expression) {
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
                             self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
-                                $el.attr( attrName, getNodeValue(true) );
+                                if(!Mvvm.elementExists($el)){
+                                    return 'removeThis';
+                                }
+                                $el.attr( attrName, getNodeValue() );
                             });
                         });
                         return valueAccessor($el, expression)();
