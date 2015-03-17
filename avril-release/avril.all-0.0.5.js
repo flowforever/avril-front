@@ -2213,6 +2213,9 @@
                 return getScope(getNs($el), $el);
             }
             , parseExpression = function (expression, binder) {
+                if(!expression){
+                    return "";
+                }
                 var cacheKey = expression = expression.trim();
                 if (_basicValueTypeReg.test(expression)) {
                     return expression;
@@ -2250,9 +2253,9 @@
                 };
             }
             , _generateSelector = function () {
-                return avril.array(avril.object(binders).keys()).select(function (key) {
+                return '[av],'+ avril.array(avril.object(binders).keys()).select(function (key) {
                     return '[' + Mvvm.defaults.attr_pre + '-' + key + ']'
-                }).value().join(',')+',[av-stop]';
+                }).value().join(',')+',[' + Mvvm.defaults.attr_pre + '-stop]';
             }
             , binderSelector = function (name) {
                 return '[' + binderName(name) + ']'
@@ -2304,7 +2307,7 @@
                         (function (bName) {
                             var expression = $el.attr(binderName(bName));
                             var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
-                            binders[bName].init($el, valueAccessor($el, expression, bName), {
+                            binders[bName] && binders[bName].init($el, valueAccessor($el, expression, bName), {
                                 expression: expression
                                 , ns: ns
                                 , dependencies: dependencies
@@ -2312,6 +2315,7 @@
                         })(bName);
                     }
                     cacheNs($el, ns);
+                    initAttrNodes($el);
                     initTextNodes($el);
                 }
             }()
@@ -2364,10 +2368,12 @@
                     expression: expression, binder: binder, ns: getNs($el)
                 }));
             }
-            , expressionNodeReg = /{{((?:.|\n)+?)}}/g
+            , getExpressionNodeReg = function() { return /{{((?:.|\n)+?)}}/g; }
+            , expressionNodeReg = getExpressionNodeReg()
             , getAllTextNodes = self.getAllTextNodes = function ($el) {
                 var textNodes = [];
                 var filterTextNode = function() {
+                    var expressionNodeReg = getExpressionNodeReg();
                     if( this.nodeType == 3
                         && expressionNodeReg.test(this.nodeValue)  ) {
                         $(this).parentsUntil($el).filter(self.selector).length === 0 && textNodes.push(this);
@@ -2392,8 +2398,42 @@
                 function getNodeValue(isFirstTime){
                     return nodeValue.replace(expressionNodeReg, function (expressionDefine, expression) {
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
-                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function(){
+                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
+
                                 node.nodeValue = getNodeValue();
+                            });
+                        });
+                        return valueAccessor($el, expression)();
+                    });
+                }
+            }
+            , initAttrNodes = function ($el) {
+                var el = $el[0]
+                    , attrs = avril.object.toArray(el.attributes)
+                    , binders = getBinders($el)
+                    , ignores = [
+                        Mvvm.defaults.attr_pre+'-stop',
+                        Mvvm.defaults.attr_pre+'-each-item',
+                        Mvvm.defaults.attr_pre+'-each-item-group-id'
+                    ];
+
+                avril.array(attrs).each(function (node) {
+                    var attrName = node.nodeName.replace(Mvvm.defaults.attr_pre+'-','');
+                    if(node.nodeName.indexOf(Mvvm.defaults.attr_pre) === 0 && !binders[attrName] && ignores.indexOf(node.nodeName) < 0 ) {
+                        initAttrNode($el, attrName, node.nodeValue);
+                    }
+                });
+            }
+            , initAttrNode = function($el, attrName, expression) {
+                $el.attr( attrName, getNodeValue(true) );
+                function getNodeValue(isFirstTime){
+                    return expression.replace(expressionNodeReg, function (expressionDefine, expression) {
+                        isFirstTime && findExpressionDependency(expression, function(dependency) {
+                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
+                                if(!Mvvm.elementExists($el)){
+                                    return 'removeThis';
+                                }
+                                $el.attr( attrName, getNodeValue() );
                             });
                         });
                         return valueAccessor($el, expression)();

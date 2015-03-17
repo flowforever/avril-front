@@ -353,16 +353,27 @@
                 });
             }
             , initNode = function($el, node, nodeValue) {
+                var expressionValueCache = []
+                    , triggerIndex = 0;
+
                 node.nodeValue = getNodeValue(true);
-                function getNodeValue(isFirstTime){
+                function getNodeValue(isFirstTime) {
+                    var index = 0;
                     return nodeValue.replace(expressionNodeReg, function (expressionDefine, expression) {
+                        var currentIndex = index++;
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
                             self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
-
+                                if(!Mvvm.elementExists($el)){
+                                    return 'removeThis';
+                                }
+                                triggerIndex = currentIndex;
                                 node.nodeValue = getNodeValue();
                             });
                         });
-                        return valueAccessor($el, expression)();
+                        if(!isFirstTime && currentIndex != triggerIndex) {
+                            return expressionValueCache[currentIndex];
+                        }
+                        return expressionValueCache[currentIndex] = valueAccessor($el, expression)();
                     });
                 }
             }
@@ -384,18 +395,26 @@
                 });
             }
             , initAttrNode = function($el, attrName, expression) {
+                var expressionValueCache = []
+                    , triggerIndex = 0;
                 $el.attr( attrName, getNodeValue(true) );
                 function getNodeValue(isFirstTime){
+                    var index = 0;
                     return expression.replace(expressionNodeReg, function (expressionDefine, expression) {
+                        var currentIndex = index++;
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
                             self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
                                 if(!Mvvm.elementExists($el)){
                                     return 'removeThis';
                                 }
+                                triggerIndex = currentIndex;
                                 $el.attr( attrName, getNodeValue() );
                             });
                         });
-                        return valueAccessor($el, expression)();
+                        if(!isFirstTime && currentIndex != triggerIndex) {
+                            return expressionValueCache[currentIndex];
+                        }
+                        return expressionValueCache[currentIndex] =  valueAccessor($el, expression)();
                     });
                 }
             }
