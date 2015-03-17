@@ -2364,10 +2364,12 @@
                     expression: expression, binder: binder, ns: getNs($el)
                 }));
             }
-            , expressionNodeReg = /{{((?:.|\n)+?)}}/g
+            , getExpressionNodeReg = function() { return /{{((?:.|\n)+?)}}/g; }
+            , expressionNodeReg = getExpressionNodeReg()
             , getAllTextNodes = self.getAllTextNodes = function ($el) {
                 var textNodes = [];
                 var filterTextNode = function() {
+                    var expressionNodeReg = getExpressionNodeReg();
                     if( this.nodeType == 3
                         && expressionNodeReg.test(this.nodeValue)  ) {
                         $(this).parentsUntil($el).filter(self.selector).length === 0 && textNodes.push(this);
