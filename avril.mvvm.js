@@ -373,7 +373,7 @@
                         if(!isFirstTime && currentIndex != triggerIndex) {
                             return expressionValueCache[currentIndex];
                         }
-                        return expressionValueCache[currentIndex] = valueAccessor($el, expression)();
+                        return expressionValueCache[currentIndex] = valueAccessor($el, expression)() || '';
                     });
                 }
             }
