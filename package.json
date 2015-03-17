@@ -1,6 +1,6 @@
 {
   "name": "avril-front",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "avril front-end js framework",
   "main": "avril.js",
   "directories": {
