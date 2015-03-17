@@ -56,15 +56,31 @@
                     }
                 }
                 binder = {};
-                avril.array(self.selector.split(',')).each(function (selector) {
-                    if ($el.is(selector)) {
-                        var binderName = selector.replace(/\[|\]/g, '').replace(Mvvm.defaults.attr_pre + '-', '');
-                        binder[binderName] = binders[binderName];
-                    }
-                });
-                //binderCacheProvider($el,binder);
+
+                var el = $el[0]
+                    , selectors = self.selector.split(',')
+                    , attrs = avril.object.toArray(el.attributes);
+
+                if(attrs.length == 0) {
+                    binderCacheProvider('group_' + eachGroupId, binder);
+                    return binder;
+                }
+
+                avril.array(attrs).each(parseNode);
+
                 binderCacheProvider('group_' + eachGroupId, binder);
+
                 return binder;
+
+                function parseNode(node) {
+                    if(node){
+                        var selector = node.nodeName;
+                        if(selectors.indexOf('['+selector+']') >= 0) {
+                            var binderName = selector.replace(/\[|\]/g, '').replace(Mvvm.defaults.attr_pre + '-', '');
+                            binder[binderName] = binders[binderName];
+                        }
+                    }
+                }
             }
             , _rootScopes = {
                 $root: {}
@@ -195,7 +211,7 @@
             , _generateSelector = function () {
                 return avril.array(avril.object(binders).keys()).select(function (key) {
                     return '[' + Mvvm.defaults.attr_pre + '-' + key + ']'
-                }).value().join(',');
+                }).value().join(',')+',[av-stop]';
             }
             , binderSelector = function (name) {
                 return '[' + binderName(name) + ']'
@@ -210,6 +226,7 @@
                     return true;
                 }
                 if (initedElementCacheProvider($el) && !force) {
+                    initTextNodes($el);
                     return true;
                 }
 
@@ -254,6 +271,7 @@
                         })(bName);
                     }
                     cacheNs($el, ns);
+                    initTextNodes($el);
                 }
             }()
             , initDependency = function (expression, $el, binder, ns, oldNs, removeOldSubscribe) {
@@ -304,6 +322,42 @@
                 binders[binder].update($el, valueAccessor($el, expression, binder), $.extend(true, {}, updateOptions, {
                     expression: expression, binder: binder, ns: getNs($el)
                 }));
+            }
+            , expressionNodeReg = /{{((?:.|\n)+?)}}/g
+            , getAllTextNodes = self.getAllTextNodes = function ($el) {
+                var textNodes = [];
+                var filterTextNode = function() {
+                    if( this.nodeType == 3
+                        && expressionNodeReg.test(this.nodeValue)  ) {
+                        $(this).parentsUntil($el).filter(self.selector).length === 0 && textNodes.push(this);
+                    }
+                };
+
+                $el.contents().each(filterTextNode);
+
+                //the belowing might cause bad performance
+                $el.find(':not('+self.selector+')').contents().each(filterTextNode);
+
+                return textNodes;
+            }
+            , initTextNodes = function($el) {
+                var textNodes = getAllTextNodes($el);
+                avril.array(textNodes).each(function(textNode) {
+                    initNode($el, textNode, textNode.nodeValue);
+                });
+            }
+            , initNode = function($el, node, nodeValue) {
+                node.nodeValue = getNodeValue(true);
+                function getNodeValue(isFirstTime){
+                    return nodeValue.replace(expressionNodeReg, function (expressionDefine, expression) {
+                        isFirstTime && findExpressionDependency(expression, function(dependency) {
+                            self.subscribe(self.resolveAbsNs(getNs($el), dependency), function(){
+                                node.nodeValue = getNodeValue();
+                            });
+                        });
+                        return valueAccessor($el, expression)();
+                    });
+                }
             }
             , _eventPre = 'ave_'
             , getSubscribeEvents = function () {
@@ -1156,10 +1210,6 @@
         });
 
         addMagic('$setVal', function (relativePath, val) {
-            if(arguments.length == 1) {
-                val = relativePath;
-                relativePath = this.$ns;
-            }
             self.setVal(resolveAbsNs(this.$ns, relativePath), val);
             return val;
         });
