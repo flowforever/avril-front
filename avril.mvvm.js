@@ -172,6 +172,9 @@
                 return getScope(getNs($el), $el);
             }
             , parseExpression = function (expression, binder) {
+                if(!expression){
+                    return "";
+                }
                 var cacheKey = expression = expression.trim();
                 if (_basicValueTypeReg.test(expression)) {
                     return expression;
@@ -209,7 +212,7 @@
                 };
             }
             , _generateSelector = function () {
-                return avril.array(avril.object(binders).keys()).select(function (key) {
+                return '[av],'+ avril.array(avril.object(binders).keys()).select(function (key) {
                     return '[' + Mvvm.defaults.attr_pre + '-' + key + ']'
                 }).value().join(',')+',[' + Mvvm.defaults.attr_pre + '-stop]';
             }
@@ -263,7 +266,7 @@
                         (function (bName) {
                             var expression = $el.attr(binderName(bName));
                             var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
-                            binders[bName].init($el, valueAccessor($el, expression, bName), {
+                            binders[bName] && binders[bName].init($el, valueAccessor($el, expression, bName), {
                                 expression: expression
                                 , ns: ns
                                 , dependencies: dependencies
