@@ -2404,7 +2404,7 @@
                         var currentIndex = index++;
                         isFirstTime && findExpressionDependency(expression, function(dependency) {
                             self.subscribe(self.resolveAbsNs(getNs($el), dependency), function() {
-                                if(!Mvvm.elementExists($el)){
+                                if(node.parentElement && !Mvvm.elementExists($el)){
                                     return 'removeThis';
                                 }
                                 triggerIndex = currentIndex;
@@ -3386,6 +3386,11 @@
             self.setVal(scopeNs + '.reload', loadData);
 
             return scopeNs;
+        });
+
+        addMagic('$elExists', function(el) {
+            if(!el){ el = this.$el; }
+            return Mvvm.elementExists(el);
         });
 
     });
