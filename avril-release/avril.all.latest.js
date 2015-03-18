@@ -1,6 +1,61 @@
 //#region avril.array
 ;(function(){
 
+    if (!Array.prototype.indexOf) {
+        Array.prototype.indexOf = function(searchElement, fromIndex) {
+            var k;
+            // 1. Let O be the result of calling ToObject passing
+            //    the this value as the argument.
+            if (null === this || undefined === this) {
+                throw new TypeError('"this" is null or not defined');
+            }
+            var O = Object(this);
+            // 2. Let lenValue be the result of calling the Get
+            //    internal method of O with the argument "length".
+            // 3. Let len be ToUint32(lenValue).
+            var len = O.length >>> 0;
+            // 4. If len is 0, return -1.
+            if (len === 0) {
+                return -1;
+            }
+            // 5. If argument fromIndex was passed let n be
+            //    ToInteger(fromIndex); else let n be 0.
+            var n = +fromIndex || 0;
+            if (Math.abs(n) === Infinity) {
+                n = 0;
+            }
+            // 6. If n >= len, return -1.
+            if (n >= len) {
+                return -1;
+            }
+            // 7. If n >= 0, then Let k be n.
+            // 8. Else, n<0, Let k be len - abs(n).
+            //    If k is less than 0, then let k be 0.
+            k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+            // 9. Repeat, while k < len
+            while (k < len) {
+                // a. Let Pk be ToString(k).
+                //   This is implicit for LHS operands of the in operator
+                // b. Let kPresent be the result of calling the
+                //    HasProperty internal method of O with argument Pk.
+                //   This step can be combined with c
+                // c. If kPresent is true, then
+                //    i.  Let elementK be the result of calling the Get
+                //        internal method of O with the argument ToString(k).
+                //   ii.  Let same be the result of applying the
+                //        Strict Equality Comparison Algorithm to
+                //        searchElement and elementK.
+                //  iii.  If same is true, return k.
+                if (k in O && O[k] === searchElement) {
+                    return k;
+                }
+                k++;
+            }
+            return -1;
+        };
+    }
+
+
     String.prototype.toUnicode = function () {
         return escape(this).replace(/\%/g, '\\');
     }
@@ -36,10 +91,10 @@
         return this == target;
     }
 
-    String.prototype.trim = function () {
+    !String.prototype.trim &&( String.prototype.trim = function () {
         var reg = /(^\s*)|(\s*$)/g;
         return this.replace(reg, "");
-    }
+    });
 
     String.prototype.trimAll = function () {
         var reg = /\s*/g;
@@ -2044,6 +2099,8 @@
  */
 ;
 (function ($, _evalExpression, _compiledExpression) {
+    var isIE = navigator.userAgent.match(/msie/i);
+
     var Mvvm = avril.createlib('avril.Mvvm', function (options) {
 
         var config = $.extend(this.options(), options, {
@@ -2301,22 +2358,31 @@
                         });
                     };
                 return function ($el) {
+                    var bindedCache = {};
                     var binders = getBinders($el);
                     var ns = getNs($el);
+                    binders['scope'] && initAttrBinder('scope');
+                    binders['if'] && initAttrBinder('if');
                     for (var bName in binders) {
-                        (function (bName) {
-                            var expression = $el.attr(binderName(bName));
-                            var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
-                            binders[bName] && binders[bName].init($el, valueAccessor($el, expression, bName), {
-                                expression: expression
-                                , ns: ns
-                                , dependencies: dependencies
-                            });
-                        })(bName);
+                       initAttrBinder(bName);
                     }
                     cacheNs($el, ns);
                     initAttrNodes($el);
                     initTextNodes($el);
+
+                    function initAttrBinder(bName) {
+                        if(bindedCache[bName]){
+                            return false;
+                        }
+                        bindedCache[name] = true;
+                        var expression = $el.attr(binderName(bName));
+                        var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
+                        binders[bName] && binders[bName].init($el, valueAccessor($el, expression, bName), {
+                            expression: expression
+                            , ns: ns
+                            , dependencies: dependencies
+                        });
+                    }
                 }
             }()
             , initDependency = function (expression, $el, binder, ns, oldNs, removeOldSubscribe) {
@@ -2884,7 +2950,8 @@
                 if (!value) {
                     $el.html('');
                 }
-            }, update: function ($el, value) {
+            }
+            , update: function ($el, value) {
                 var html = htmlCacheProvider($el);
                 if (value()) {
                     $el.html(html);
@@ -2900,7 +2967,8 @@
                 addBinderClass($el, 'visible-if');
                 binders['if'].init($el, value);
                 binders.visible.init($el, value);
-            }, update: function ($el, value) {
+            }
+            , update: function ($el, value) {
                 binders['if'].update($el, value);
                 binders.visible.update($el, value);
             }
@@ -2997,10 +3065,15 @@
 
                 $start.after(replaceMement);
 
+                var currentElHtml = $el[0].innerHTML
+                    , builtStr = currentElHtml.replace(replaceMement, itemsHtml);
 
-                var currentElHtml = $el[0].innerHTML;
+                if(!isIE){
+                    $el[0].innerHTML = builtStr;
+                }else{
+                    $el.html(builtStr);
+                }
 
-                $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
 
                 self.bindDom($el, $el.attr(binderName('delay')) !== 'false');
 
@@ -3413,7 +3486,10 @@
     };
 
     Mvvm.elementExists = function ($el) {
-        return $el.parents('html').length > 0 || $el.is('html');
+        if(!$el || $el.length === 0) {
+            return false;
+        }
+        return document.contains($el[0]);
     };
 
     Mvvm.executeExpression = function (expression, ctx) {

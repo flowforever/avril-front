@@ -3,6 +3,8 @@
  */
 ;
 (function ($, _evalExpression, _compiledExpression) {
+    var isIE = navigator.userAgent.match(/msie/i);
+
     var Mvvm = avril.createlib('avril.Mvvm', function (options) {
 
         var config = $.extend(this.options(), options, {
@@ -260,22 +262,31 @@
                         });
                     };
                 return function ($el) {
+                    var bindedCache = {};
                     var binders = getBinders($el);
                     var ns = getNs($el);
+                    binders['scope'] && initAttrBinder('scope');
+                    binders['if'] && initAttrBinder('if');
                     for (var bName in binders) {
-                        (function (bName) {
-                            var expression = $el.attr(binderName(bName));
-                            var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
-                            binders[bName] && binders[bName].init($el, valueAccessor($el, expression, bName), {
-                                expression: expression
-                                , ns: ns
-                                , dependencies: dependencies
-                            });
-                        })(bName);
+                       initAttrBinder(bName);
                     }
                     cacheNs($el, ns);
                     initAttrNodes($el);
                     initTextNodes($el);
+
+                    function initAttrBinder(bName) {
+                        if(bindedCache[bName]){
+                            return false;
+                        }
+                        bindedCache[name] = true;
+                        var expression = $el.attr(binderName(bName));
+                        var dependencies = initDependency(expression, $el, bName, ns, getOldNs($el), removeOldSubscribe);
+                        binders[bName] && binders[bName].init($el, valueAccessor($el, expression, bName), {
+                            expression: expression
+                            , ns: ns
+                            , dependencies: dependencies
+                        });
+                    }
                 }
             }()
             , initDependency = function (expression, $el, binder, ns, oldNs, removeOldSubscribe) {
@@ -843,7 +854,8 @@
                 if (!value) {
                     $el.html('');
                 }
-            }, update: function ($el, value) {
+            }
+            , update: function ($el, value) {
                 var html = htmlCacheProvider($el);
                 if (value()) {
                     $el.html(html);
@@ -859,7 +871,8 @@
                 addBinderClass($el, 'visible-if');
                 binders['if'].init($el, value);
                 binders.visible.init($el, value);
-            }, update: function ($el, value) {
+            }
+            , update: function ($el, value) {
                 binders['if'].update($el, value);
                 binders.visible.update($el, value);
             }
@@ -956,10 +969,15 @@
 
                 $start.after(replaceMement);
 
+                var currentElHtml = $el[0].innerHTML
+                    , builtStr = currentElHtml.replace(replaceMement, itemsHtml);
 
-                var currentElHtml = $el[0].innerHTML;
+                if(!isIE){
+                    $el[0].innerHTML = builtStr;
+                }else{
+                    $el.html(builtStr);
+                }
 
-                $el[0].innerHTML = currentElHtml.replace(replaceMement, itemsHtml);
 
                 self.bindDom($el, $el.attr(binderName('delay')) !== 'false');
 
@@ -1372,7 +1390,10 @@
     };
 
     Mvvm.elementExists = function ($el) {
-        return $el.parents('html').length > 0 || $el.is('html');
+        if(!$el || $el.length === 0) {
+            return false;
+        }
+        return document.contains($el[0]);
     };
 
     Mvvm.executeExpression = function (expression, ctx) {
