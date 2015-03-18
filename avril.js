@@ -1537,7 +1537,7 @@
 
     avril.array('log,warn,error'.split(',')).each(function(action){
         avril[action] = function(){
-            console[action] && console[action].apply(console, arguments);
+            console[action] && avril.isFunc(console[action]) && console[action].apply(console, arguments);
         }
     });
 
